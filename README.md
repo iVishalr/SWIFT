@@ -14,7 +14,7 @@ Generation of high quality images with good results, free of artefacts and odd t
 
 To make our project work in real time, we plan to make use of efficient architectures that can operate in environments where there are limits on the computation and memory available for running the models. 
 
-## Scope of the Project
+## Scope of the Project 
 
 Image super resolution involves taking a low resolution blurry image as input and generating a high resolution image while maintaining the context of the input low resolution image. It is popularly used in the following applications :
 
