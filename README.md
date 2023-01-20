@@ -1,4 +1,9 @@
-# EFFCNet - Efficient Fast Fourier Convolution Network
+# Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
+
+[Vishal Ramesha](https://github.com/iVishalr), [Abhishek Aditya BS](https://github.com/Abhishek-Aditya-bs), [Yashas Kadambi](https://github.com/Yashas120), [T Vijay Prashant](https://github.com/tvijayprashant), Shylaja S S
+
+This repository contains the official implementation for the paper titled "Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions" presented at NTIRE Workshop, CVPR 2023.
+
 ## Image Super-Resolution
 
 Image Super Resolution (SR) is the process of recovering or generating high-resolution(HR) images from low-resolution (LR) images. With the advancement in deep learning techniques in recent years, deep learning-based SR models have been actively explored and often achieve state-of-the-art performance on various benchmarks of SR. A variety of deep learning methods have been applied to solve SR tasks, ranging from the early Convolutional Neural Networks (CNN) based method to recent promising Generative Adversarial Networks and transformer based SR approaches.
