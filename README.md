@@ -1,6 +1,6 @@
 # Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
 
-[Vishal Ramesha](https://github.com/iVishalr), [Abhishek Aditya BS](https://github.com/Abhishek-Aditya-bs), [Yashas Kadambi](https://github.com/Yashas120), [T Vijay Prashant](https://github.com/tvijayprashant), Shylaja S S
+[Vishal Ramesha](https://github.com/iVishalr), [Abhishek Aditya BS](https://github.com/Abhishek-Aditya-bs), [Yashas Kadambi](https://github.com/Yashas120), [T Vijay Prashant](https://github.com/tvijayprashant), [Shylaja S S](https://scholar.google.co.in/citations?user=X365OjgAAAAJ&hl=en)
 
 This repository contains the official implementation for the paper titled "Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions" presented at NTIRE Workshop, CVPR 2023.
 
