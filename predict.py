@@ -11,6 +11,10 @@ import torch.nn as nn
 from util import calculate_psnr_ssim as util
 from model.effcNet import EFFCNet
 
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
+
 def forward_chop(model, x, scale, shave=10, min_size=30000):
     n_GPUs = 1 #min(self.n_GPUs, 4)
     b, c, h, w = x.size()
@@ -54,11 +58,10 @@ def forward_chop(model, x, scale, shave=10, min_size=30000):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scale', type=int, default=2, help='scale factor: 2, 3, 4')
-    parser.add_argument('--training_patch_size', type=int, default=128, help='patch size used in training SwinIR. '
+    parser.add_argument('--training_patch_size', type=int, default=128, help='patch size used in training EFFCNet. '
                                        'Just used to differentiate two different settings in Table 2 of the paper. '
                                        'Images are NOT tested patch by patch.')
-    parser.add_argument('--model_path', type=str,
-                        default='model_zoo/effcnet/EFFCNet-S-2x.pth')
+    parser.add_argument('--model_path', type=str,default='model_zoo/effcnet/EFFCNet-S-2x.pth')
     parser.add_argument('--folder_lq', type=str, default=None, help='input low-quality test image folder')
     parser.add_argument('--folder_gt', type=str, default=None, help='input ground-truth test image folder')
     parser.add_argument('--tile', type=int, default=None, help='Tile size, None for no tile during testing (testing as a whole)')
@@ -86,20 +89,8 @@ def main():
         print("Using JIT")
         model = torch.jit.script(model, example_inputs=(torch.randn(1,3,256,256, dtype=torch.float32, device=device),))
 
-    # model = torch.jit.freeze(model)
-    # model = torch.jit.script(model)
-    # torch.jit.save(model, "EFFCNet-S-674k-jit-model.pt")
-
-    # model = None
-    # model = torch.jit.load("EFFCNet-S-674k-jit-model.pt")
-    # model = torch.jit.optimize_for_inference(torch.jit.script(model.eval()))
-    # model = model.to("cpu")
-
-    print(f"GPU Memory Occupied by Model : {torch.cuda.max_memory_allocated() // 1024 // 1024}MB")
-
     folder, save_dir, border, window_size = setup(args)
     os.makedirs(save_dir, exist_ok=True)
-    
     test_results = OrderedDict()
     test_results['psnr'] = []
     test_results['ssim'] = []
