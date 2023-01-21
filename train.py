@@ -18,7 +18,7 @@ from util.calculate_psnr_ssim import calculate_psnr, calculate_ssim
 from tqdm import tqdm
 from fvcore.nn import FlopCountAnalysis, flop_count_table
 
-from model.effcNet import EFFCNet
+from model.SWIFT import SWIFT
 from data import Set5_val, dataset
 from data.dataset import CPUPrefetcher, CUDAPrefetcher
 
@@ -64,7 +64,7 @@ parser.add_argument("--isY", action="store_true", default=False)
 parser.add_argument("--show_metrics", action="store_true", default=False)
 parser.add_argument("--ext", type=str, default='.png')
 parser.add_argument("--phase", type=str, default='train')
-parser.add_argument("--model", type=str, default='EFFC')
+parser.add_argument("--model", type=str, default='SWIFT')
 
 args = parser.parse_args()
 
@@ -110,7 +110,7 @@ device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
 print("===> Loading Datasets")
 
 trainset = dataset.Dataset(args, args.load_mem)
-testset = Set5_val.DatasetFromFolderVal("./testsets/Set5/HR/", "./testsets/Set5/LR_bicubic/X{}/".format(args.scale), args.scale)
+testset = Set5_val.DatasetFromFolderVal("./testsets/Set5/HR/", "./testsets/Set5/LR/X{}/".format(args.scale), args.scale)
 
 training_data_loader = DataLoader(dataset=trainset, num_workers=args.threads, batch_size=args.batch_size, shuffle=True, pin_memory=True, drop_last=True)
 testing_data_loader = DataLoader(dataset=testset, num_workers=args.threads, batch_size=args.test_batch_size, shuffle=False)
@@ -121,7 +121,7 @@ testing_data_loader = CUDAPrefetcher(testing_data_loader, device)
 print("===> Building Model")
 args.is_train = True
 
-model = EFFCNet(
+model = SWIFT(
     img_size=args.patch_size//args.scale,
     patch_size=1,
     in_channels=3,
@@ -228,7 +228,7 @@ def train_epochs(epoch):
         losses.append(loss.item())
 
         if (epoch * N + it) % args.log_every == 0:
-            print(f"Epoch [{epoch}/{500000//N}] it [{epoch * N + it}/{N}] lr: {optimizer.param_groups[0]['lr']:e} loss: {loss.item():.5f}")
+            print(f"Epoch [{epoch}/{700000//N}] it [{epoch * N + it}/{N}] lr: {optimizer.param_groups[0]['lr']:e} loss: {loss.item():.5f}")
 
         # if args.show_metrics:
         #     psnrs.append(psnr)
@@ -403,7 +403,7 @@ print_network(model.module)
 code_start = datetime.datetime.now()
 timer = utils.Timer()
 
-for epoch in range(args.start_epoch, (500000//len(training_data_loader))+1):
+for epoch in range(args.start_epoch, (700000//len(training_data_loader))+1):
     t_epoch_start = timer.t()
     epoch_start = datetime.datetime.now()
     valid(args.scale, epoch)

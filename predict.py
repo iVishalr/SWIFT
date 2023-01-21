@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from util import calculate_psnr_ssim as util
-from model.effcNet import EFFCNet
+from model.SWIFT import SWIFT
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -61,10 +61,10 @@ def forward_chop(model, x, scale, shave=10, min_size=30000):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scale', type=int, default=2, help='scale factor: 2, 3, 4')
-    parser.add_argument('--training_patch_size', type=int, default=128, help='patch size used in training EFFCNet. '
+    parser.add_argument('--training_patch_size', type=int, default=128, help='patch size used in training SWIFT. '
                                        'Just used to differentiate two different settings in Table 2 of the paper. '
                                        'Images are NOT tested patch by patch.')
-    parser.add_argument('--model_path', type=str,default='model_zoo/effcnet/EFFCNet-S-2x.pth')
+    parser.add_argument('--model_path', type=str,default='model_zoo/SWIFT/SWIFT-S-2x.pth')
     parser.add_argument('--folder_lq', type=str, default=None, help='input low-quality test image folder')
     parser.add_argument('--folder_gt', type=str, default=None, help='input ground-truth test image folder')
     parser.add_argument('--tile', type=int, default=None, help='Tile size, None for no tile during testing (testing as a whole)')
@@ -146,7 +146,7 @@ def main():
         if output.ndim == 3:
             output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))  # CHW-RGB to HCW-BGR
         output = (output * 255.0).round().astype(np.uint8)  # float32 to uint8
-        cv2.imwrite(f'{save_dir}/{imgname}_EFFC.png', output)
+        cv2.imwrite(f'{save_dir}/{imgname}_SWIFT.png', output)
 
         # evaluate psnr/ssim
         if img_gt is not None:
@@ -186,7 +186,7 @@ def main():
 
 def define_model(args):
 
-    effcnet_model = EFFCNet(
+    swift = SWIFT(
         img_size=64,
         patch_size=1,
         in_channels=3,
@@ -204,7 +204,7 @@ def define_model(args):
     )
 
     param_key_g = "model"
-    model = effcnet_model
+    model = swift
     pretrained_model = torch.load(args.model_path, map_location="cpu")
     model.load_state_dict(pretrained_model[param_key_g] if param_key_g in pretrained_model.keys() else pretrained_model, strict=True)
     return model
@@ -212,7 +212,7 @@ def define_model(args):
 
 def setup(args):
     # 001 classical image sr/ 002 lightweight image sr
-    save_dir = f'results/effc_lightweight_x{args.scale}'
+    save_dir = f'results/SWIFT_lightweight_x{args.scale}'
     folder = args.folder_gt if args.folder_gt else args.folder_lq
     
     if not os.path.exists(folder):

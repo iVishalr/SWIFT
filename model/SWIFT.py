@@ -116,7 +116,7 @@ class FSTB(nn.Module):
         out = out + x
         return out
         
-class EFFCNet(nn.Module):
+class SWIFT(nn.Module):
     def __init__(self,
         img_size=64,
         patch_size=1, 
@@ -143,7 +143,7 @@ class EFFCNet(nn.Module):
         attn_scale=False,
         ):
         
-        super(EFFCNet, self).__init__()
+        super(SWIFT, self).__init__()
         
         in_channels = in_channels
         out_channels = in_channels
