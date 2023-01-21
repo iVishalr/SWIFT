@@ -13,14 +13,14 @@ from typing import Tuple, Optional
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
-    def __init__(self, drop_prob=None):
+    def __init__(self, drop_prob: Optional[float] = None) -> None:
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return drop_path(x, self.drop_prob, self.training)
 
-def drop_path(x, drop_prob: float = 0., training: bool = False):
+def drop_path(x: torch.Tensor, drop_prob: float = 0., training: bool = False) -> torch.Tensor:
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
     This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
     the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
@@ -51,7 +51,7 @@ def window_partition(x: torch.Tensor, window_size: int):
     return windows
 
 
-def window_reverse(windows, window_size: int, H: int, W: int):
+def window_reverse(windows: torch.Tensor, window_size: int, H: int, W: int):
     """
     Args:
         windows: (num_windows*B, window_size, window_size, C)
@@ -80,7 +80,7 @@ class WindowAttentionV2(nn.Module):
     """
 
     def __init__(self, dim, window_size, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0.,
-                 pretrained_window_size=[0, 0], attn_scale=False):
+                 pretrained_window_size=[0, 0], attn_scale=False) -> None:
 
         super().__init__()
         self.dim = dim
@@ -143,7 +143,7 @@ class WindowAttentionV2(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, x, mask: Optional[torch.Tensor] = None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Args:
             x: input features with shape of (num_windows*B, N, C)
@@ -209,7 +209,7 @@ class WindowAttentionV2(nn.Module):
         return flops
 
 class Mlp(nn.Module):
-    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.) -> None:
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -218,7 +218,7 @@ class Mlp(nn.Module):
         self.fc2 = nn.Linear(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)
@@ -244,22 +244,35 @@ class SwinTransformerBlockV2(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
     """
 
-    def __init__(self, dim, input_resolution, num_heads, window_size: int = 7, shift_size: int = 0,
-                 mlp_ratio: float = 4., qkv_bias: bool = True, qk_scale=None, drop: float = 0., attn_drop: float = 0., drop_path: float =0.,
-                 act_layer=nn.GELU, norm_layer=nn.LayerNorm, feat_scale: bool = True, attn_scale: bool = False):
+    def __init__(self, dim, 
+        input_resolution: Tuple[int, int], 
+        num_heads: int, 
+        window_size: int = 7, 
+        shift_size: int = 0,
+        mlp_ratio: float = 4., 
+        qkv_bias: bool = True, 
+        qk_scale: Optional[float] = None, 
+        drop: float = 0., 
+        attn_drop: float = 0., 
+        drop_path: float =0.,
+        act_layer=nn.GELU, 
+        norm_layer=nn.LayerNorm, 
+        feat_scale: bool = True, 
+        attn_scale: bool = False
+        ):
         super().__init__()
-        self.dim: int = dim
-        self.input_resolution: tuple(int) = input_resolution
-        self.num_heads: int = num_heads
-        self.window_size: int = window_size
-        self.shift_size: int = shift_size
-        self.mlp_ratio: float = mlp_ratio
-        self.feat_scale: bool = feat_scale
+        self.dim = dim
+        self.input_resolution = input_resolution
+        self.num_heads = num_heads
+        self.window_size = window_size
+        self.shift_size = shift_size
+        self.mlp_ratio = mlp_ratio
+        self.feat_scale = feat_scale
 
         if min(self.input_resolution) <= self.window_size:
             # if window size is larger than input resolution, we don't partition windows
-            self.shift_size: int = 0
-            self.window_size: int = min(self.input_resolution)
+            self.shift_size = 0
+            self.window_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
 
         self.norm1 = norm_layer(dim)
@@ -281,7 +294,7 @@ class SwinTransformerBlockV2(nn.Module):
         self.register_buffer("attn_mask", attn_mask)
 
     @torch.jit.ignore()
-    def calculate_mask(self, x_size: Tuple[int, int]):
+    def calculate_mask(self, x_size: Tuple[int, int]) -> torch.Tensor:
         # calculate attention mask for SW-MSA
         H, W = x_size
         img_mask = torch.zeros((1, H, W, 1))  # 1 H W 1
@@ -304,12 +317,12 @@ class SwinTransformerBlockV2(nn.Module):
 
         return attn_mask
 
-    def freq_decompose(self, x: torch.Tensor):
+    def freq_decompose(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x_d = torch.mean(x, -2, keepdim=True) # [bs, 1, dim]
         x_h = x - x_d # high freq [bs, len, dim]
         return x_d, x_h
 
-    def forward(self, x: torch.Tensor, x_size: Tuple[int, int]):
+    def forward(self, x: torch.Tensor, x_size: Tuple[int, int]) -> torch.Tensor:
         H, W = x_size
         B, L, C = x.shape
         # assert L == H * W, "input feature has wrong size"
@@ -319,9 +332,9 @@ class SwinTransformerBlockV2(nn.Module):
 
         # cyclic shift
         if self.shift_size > 0:
-            shifted_x: torch.Tensor = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
+            shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
         else:
-            shifted_x: torch.Tensor = x
+            shifted_x = x
 
         # partition windows
         x_windows = window_partition(shifted_x, self.window_size)  # nW*B, window_size, window_size, C
@@ -385,7 +398,13 @@ class PatchEmbed(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: None
     """
 
-    def __init__(self, img_size=224, patch_size=4, in_chans=3, embed_dim=96, norm_layer=None):
+    def __init__(self, 
+        img_size: int = 224, 
+        patch_size: int = 4, 
+        in_chans: int = 3, 
+        embed_dim: int = 96, 
+        norm_layer: Optional[nn.Module] = None) -> None:
+
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
@@ -403,7 +422,7 @@ class PatchEmbed(nn.Module):
         else:
             self.norm = None
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.flatten(2).transpose(1, 2)  # B Ph*Pw C
 
         if self.norm is not None:
@@ -428,7 +447,13 @@ class PatchUnEmbed(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: None
     """
 
-    def __init__(self, img_size=224, patch_size=4, in_chans=3, embed_dim=96, norm_layer=None):
+    def __init__(self, 
+        img_size: int = 224, 
+        patch_size: int = 4, 
+        in_chans: int = 3, 
+        embed_dim: int = 96, 
+        norm_layer: Optional[nn.Module] = None) -> None:
+
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
@@ -441,7 +466,7 @@ class PatchUnEmbed(nn.Module):
         self.in_chans = in_chans
         self.embed_dim = embed_dim
 
-    def forward(self, x, x_size: Tuple[int, int]):
+    def forward(self, x: torch.Tensor, x_size: Tuple[int, int]) -> torch.Tensor:
         B, HW, C = x.shape
         x = x.transpose(1, 2).view(B, self.embed_dim, x_size[0], x_size[1])  # B Ph*Pw C
         return x

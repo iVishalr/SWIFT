@@ -11,6 +11,9 @@ import torch.nn as nn
 from util import calculate_psnr_ssim as util
 from model.effcNet import EFFCNet
 
+import warnings
+warnings.filterwarnings("ignore")
+
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
@@ -68,9 +71,12 @@ def main():
     parser.add_argument('--tile_overlap', type=int, default=32, help='Overlapping of different tiles')
     parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
     parser.add_argument('--forward_chop', default=False, action="store_true", help='Use Forward Chop.')
+
+
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
     # set up model
     if os.path.exists(args.model_path):
         print(f'loading model from {args.model_path}')
@@ -180,14 +186,14 @@ def main():
 
 def define_model(args):
 
-    effcnet_model = model = EFFCNet(
+    effcnet_model = EFFCNet(
         img_size=64,
         patch_size=1,
         in_channels=3,
         embd_dim=64,
-        hfbs=[2, 2, 2, 2],
+        rfbs=[2, 2, 2, 2],
         depths=[2, 2, 2, 2],
-        num_heads=[8, 8, 8, 8,8],
+        num_heads=[8, 8, 8, 8],
         mlp_ratio=1,
         window_size=8,
         residual_conv="3conv",
@@ -199,7 +205,6 @@ def define_model(args):
 
     param_key_g = "model"
     model = effcnet_model
-
     pretrained_model = torch.load(args.model_path, map_location="cpu")
     model.load_state_dict(pretrained_model[param_key_g] if param_key_g in pretrained_model.keys() else pretrained_model, strict=True)
     return model

@@ -133,7 +133,7 @@ def test(model_path, model_type="small"):
             patch_size=1,
             in_channels=3,
             embd_dim=64,
-            hfbs=[2, 2, 2, 2],
+            rfbs=[2, 2, 2, 2],
             depths=[2, 2, 2, 2],
             num_heads=[8, 8, 8, 8],
             mlp_ratio=1,
@@ -144,13 +144,13 @@ def test(model_path, model_type="small"):
             feat_scale=False,
             attn_scale=True,
         )
-    elif model_type == 'M':
+    elif model_type == 'medium':
         base_model = EFFCNet(
             img_size=args.patch_size//args.scale,
             patch_size=1,
             in_channels=3,
             embd_dim=64,
-            hfbs=[2, 2, 2, 2, 2],
+            rfbs=[2, 2, 2, 2, 2],
             depths=[2, 2, 2, 2, 2],
             num_heads=[8, 8, 8, 8, 8],
             mlp_ratio=1,
@@ -173,6 +173,7 @@ def test(model_path, model_type="small"):
         print("loading :", model_path)
         checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model'], strict=True)
+
         model.to(device)
         model.eval()
         models.append((model, model_weights))

@@ -79,7 +79,7 @@ class one_conv(nn.Module):
             output = x + self.w(self.conv1(self.relu(self.conv(x))))
         return output
 
-class HiFB6(nn.Module):
+class RFB(nn.Module):
     def __init__(self, in_channels, out_channels) -> None:
         super().__init__()
 

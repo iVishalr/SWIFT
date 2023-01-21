@@ -3,17 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.layers import trunc_normal_
 from model.attention import PatchEmbed, PatchUnEmbed, SwinTransformerBlockV2
-from model.modules import HiFB6, PixelShuffleUpsample, default_conv
+from model.modules import RFB, PixelShuffleUpsample, default_conv
 from typing import Tuple
 
-class RFB(nn.Module):
+class FSTB(nn.Module):
+    '''
+    Fourier-Swin-Transformer-block
+    '''
     def __init__(self, 
         in_channels, 
         out_channels,
         embd_dim, 
         num_heads,
         depth,
-        hfbs,
+        rfbs,
         window_size,
         img_size, 
         mlp_ratio=0.5,
@@ -30,7 +33,7 @@ class RFB(nn.Module):
         residual_conv="1conv"
     ):
         
-        super(RFB, self).__init__()
+        super(FSTB, self).__init__()
         
         self.depth = depth
         self.embd_dim = embd_dim
@@ -55,9 +58,9 @@ class RFB(nn.Module):
             num_patches = self.patch_embed.num_patches
             patches_resolution = self.patch_embed.patches_resolution
 
-        self.hfbs = nn.ModuleList([
-            HiFB6(out_channels, out_channels)
-            for _ in range(hfbs)
+        self.rfbs = nn.ModuleList([
+            RFB(out_channels, out_channels)
+            for _ in range(rfbs)
         ])
 
         self.blocks = nn.ModuleList([
@@ -106,8 +109,8 @@ class RFB(nn.Module):
             # reform the image
             out = self.patch_unembd(out, x_size)
 
-        for hfb in self.hfbs:
-            out = hfb(out)
+        for rfb in self.rfbs:
+            out = rfb(out)
 
         out = self.conv(out)
         out = out + x
@@ -120,7 +123,7 @@ class EFFCNet(nn.Module):
         in_channels=3,
         embd_dim=60,
         depths=[6,6,6,6],
-        hfbs=[2,2,2,2],
+        rfbs=[2,2,2,2],
         num_heads=[6,6,6,6],
         window_size=8,
         mlp_ratio=0.5,
@@ -180,12 +183,12 @@ class EFFCNet(nn.Module):
         self.layers = nn.ModuleList()
         
         for i_layer in range(self.num_layers):
-            layer = RFB(
+            layer = FSTB(
                 in_channels=embd_dim,
                 out_channels=embd_dim,
                 embd_dim=embd_dim,
                 depth=depths[i_layer],
-                hfbs=hfbs[i_layer],
+                rfbs=rfbs[i_layer],
                 num_heads=num_heads[i_layer],
                 window_size=window_size,
                 mlp_ratio=mlp_ratio,
