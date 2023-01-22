@@ -4,15 +4,13 @@
 
 This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_ presented at NTIRE Workshop, CVPR 2023. SWIFT achieves state-of-the-art performance in the reigm of lightweight image super resolution. SWIFT outperforms SwinIR in several benchmarking datasets while using 33.55% less parameters.
 
-&nbsp;
-
 <p float="left" align="center" padding="100px">
-  <img src="./doc/images/arch4.png" width=100%/>
+  <img src="./doc/images/architecture.png" width=100%/>
 </p>
 
-&nbsp;
-
+<p align="justify">
 Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being 37% faster during inference.
+</p>
 
 ## Training
 
