@@ -133,7 +133,7 @@ python3 test.py --scale=4 --patch_size=256 --model_path="./model_zoo/SWIFT/SWIFT
 Other options provided by the `test.py` are shown below
 
 ```console
-python3 ./test.py --help
+$ python3 test.py --help
 usage: test.py [-h] [--batch_size int] --scale int --patch_size int --model_path str [--cuda] [--forward_chop] [--seed int]
 
 Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
@@ -149,7 +149,7 @@ options:
   --seed int        Seed for reproducibility.
 ```
 
-`test.py` script does not store the predictions in files. Please see the next section for storing the results from SWIFT.
+`test.py` script does not store the predictions in files. Please see the next section for storing the results from SWIFT. Using `--forward_chop` redcues memory consumption but results in lower PSNR and SSIM scores compared to the reported scores.
 
 ## Predictions
 
@@ -159,11 +159,11 @@ If you have both LR (low resolution) and HR (high resolution) image pairs, then 
 
 ```bash
 # for x2
-python3 predict.py --scale=2 --training_patch_size=128 --model_path="./model_zoo/SWIFT/SWIFT-S-2x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder>
+python3 predict.py --scale=2 --training_patch_size=128 --model_path="./model_zoo/SWIFT/SWIFT-S-2x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder> --cuda
 # for x3
-python3 predict.py --scale=3 --training_patch_size=192 --model_path="./model_zoo/SWIFT/SWIFT-S-3x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder>
+python3 predict.py --scale=3 --training_patch_size=192 --model_path="./model_zoo/SWIFT/SWIFT-S-3x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder> --cuda
 # for x4
-python3 predict.py --scale=4 --training_patch_size=256 --model_path="./model_zoo/SWIFT/SWIFT-S-4x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder>
+python3 predict.py --scale=4 --training_patch_size=256 --model_path="./model_zoo/SWIFT/SWIFT-S-4x.pth" --folder_lq=<path_to_LR_image_folder> --folder_gt=<path_to_HR_image_folder> --cuda
 ```
 
 Passing both HR and LR images will calculate the PSNR and SSIM scores using HR images as ground truth.
@@ -171,7 +171,7 @@ Passing both HR and LR images will calculate the PSNR and SSIM scores using HR i
 If you only have LR images and would like to get the SWIFT super resolved images, type the following command in terminal,
 
 ```bash
-python3 predict.py --scale=4 --training_patch_size=256 --model_path="./model_zoo/SWIFT/SWIFT-S-4x.pth" --folder_lq=<path_to_LR_image_folder>
+python3 predict.py --scale=4 --training_patch_size=256 --model_path="./model_zoo/SWIFT/SWIFT-S-4x.pth" --folder_lq=<path_to_LR_image_folder> --cuda
 ```
 
 _Note that in the above command, the path to HR folder is omitted._
@@ -181,7 +181,7 @@ Optionally, you can use `--jit` flag to compile the model using JIT which speeds
 The complete list of options provided by `predict.py` script is shown below
 
 ```console
-python3 predict.py --help
+$ python3 predict.py --help
 usage: predict.py [-h] --scale int --model_path str --folder_lq str [--folder_gt str] [--tile int] [--tile_overlap int] [--cuda] [--jit] [--forward_chop]
 
 Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
