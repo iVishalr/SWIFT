@@ -18,80 +18,53 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 
-def forward_chop(model, x, scale, shave=10, min_size=30000):
-    n_GPUs = 1 #min(self.n_GPUs, 4)
-    b, c, h, w = x.size()
-    h_half, w_half = h // 2, w // 2
-    h_size, w_size = h_half + shave, w_half + shave
-    lr_list = [
-        x[:, :, 0:h_size, 0:w_size],
-        x[:, :, 0:h_size, (w - w_size):w],
-        x[:, :, (h - h_size):h, 0:w_size],
-        x[:, :, (h - h_size):h, (w - w_size):w]]
-
-    if w_size * h_size < min_size:
-        sr_list = []
-        for i in range(0, 4, n_GPUs):
-            lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
-            sr_batch = model(lr_batch)
-            sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
-    else:
-        sr_list = [
-            forward_chop(model, patch, scale, shave=shave, min_size=min_size) \
-            for patch in lr_list
-        ]
-
-    h, w = scale * h, scale * w
-    h_half, w_half = scale * h_half, scale * w_half
-    h_size, w_size = scale * h_size, scale * w_size
-    shave *= scale
-
-    output = x.new(b, c, h, w)
-    output[:, :, 0:h_half, 0:w_half] \
-        = sr_list[0][:, :, 0:h_half, 0:w_half]
-    output[:, :, 0:h_half, w_half:w] \
-        = sr_list[1][:, :, 0:h_half, (w_size - w + w_half):w_size]
-    output[:, :, h_half:h, 0:w_half] \
-        = sr_list[2][:, :, (h_size - h + h_half):h_size, 0:w_half]
-    output[:, :, h_half:h, w_half:w] \
-        = sr_list[3][:, :, (h_size - h + h_half):h_size, (w_size - w + w_half):w_size]
-
-    return output
-
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--scale', type=int, default=2, help='scale factor: 2, 3, 4')
-    parser.add_argument('--training_patch_size', type=int, default=128, help='patch size used in training SWIFT. '
-                                       'Just used to differentiate two different settings in Table 2 of the paper. '
-                                       'Images are NOT tested patch by patch.')
-    parser.add_argument('--model_path', type=str,default='model_zoo/SWIFT/SWIFT-S-2x.pth')
-    parser.add_argument('--folder_lq', type=str, default=None, help='input low-quality test image folder')
-    parser.add_argument('--folder_gt', type=str, default=None, help='input ground-truth test image folder')
+    parser = argparse.ArgumentParser(
+    prog="predict.py",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    formatter_class=argparse.MetavarTypeHelpFormatter,
+    )
+    parser.add_argument('--scale', type=int, help='Super resolution scale. Scales: 2, 3, 4', required=True)
+    # parser.add_argument('--patch_size', type=int, help='Patch size used for training SWIFT for the scale chosen. Patch size: 128, 192, 256.', required=True)
+    parser.add_argument('--model_path', type=str, help='Path to the trained SWIFT model.', required=True)
+    parser.add_argument('--folder_lq', type=str, default=None, help='Path to low-quality (LR) test image folder.', required=True)
+    parser.add_argument('--folder_gt', type=str, default=None, help='Path to ground-truth (HR) test image folder. (Optional)')
     parser.add_argument('--tile', type=int, default=None, help='Tile size, None for no tile during testing (testing as a whole)')
     parser.add_argument('--tile_overlap', type=int, default=32, help='Overlapping of different tiles')
+    parser.add_argument('--cuda', default=False, action="store_true", help='Use CUDA enabled device for inference.')
     parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
-    parser.add_argument('--forward_chop', default=False, action="store_true", help='Use Forward Chop.')
+    parser.add_argument('--forward_chop', default=False, action="store_true", help="Use forward_chop for performing inference on devices with less memory.")
 
     args = parser.parse_args()
+    
+    cuda = args.cuda
+    device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
+    
+    device_str = None
+    if cuda and torch.cuda.is_available():
+        device_str = torch.cuda.get_device_name(0) + " GPU"
+    else:
+        device_str = "CPU"
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('cpu')
+    print(f"-> Running Inference on {device_str}.")
+
     # set up model
     if os.path.exists(args.model_path):
-        print(f'loading model from {args.model_path}')
+        print(f'-> Loading model from {args.model_path}')
     else:
         os.makedirs(os.path.dirname(args.model_path), exist_ok=True)
         url = 'https://github.com/JingyunLiang/SwinIR/releases/download/v0.0/{}'.format(os.path.basename(args.model_path))
         r = requests.get(url, allow_redirects=True)
-        print(f'downloading model {args.model_path}')
+        print(f'-> Downloading model {args.model_path}')
         open(args.model_path, 'wb').write(r.content)
 
     model = define_model(args)
     model.eval()
     model = model.to(device)
+    print(f"-> Model Built for Inference on {device_str}.")
 
     if args.jit:
-        print("Using JIT for Optimizing Model Inference")
+        print("-> Using JIT for Optimizing Model Inference.")
         x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
         y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
         inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
@@ -110,6 +83,7 @@ def main():
                 model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
                 model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
                 model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
+        print("-> JIT Optimization Completed.")
 
     folder, save_dir, border, window_size = setup(args)
     os.makedirs(save_dir, exist_ok=True)
@@ -125,6 +99,8 @@ def main():
     gpu_memory = []
     
     img_gt, img_lq = None, None
+
+    print("-> Inference Started.\n")
 
     for idx, path in enumerate(sorted(glob.glob(os.path.join(folder, '*')))):
 
@@ -199,6 +175,7 @@ def main():
             ave_ssim_y = sum(test_results['ssim_y']) / len(test_results['ssim_y'])
             print('-- Average PSNR_Y/SSIM_Y: {:.2f} dB; {:.4f}'.format(ave_psnr_y, ave_ssim_y))
 
+    print("\n-> Inference Completed.")
 
 def define_model(args):
 
@@ -225,7 +202,6 @@ def define_model(args):
     model.load_state_dict(pretrained_model[param_key_g] if param_key_g in pretrained_model.keys() else pretrained_model, strict=True)
     return model
 
-
 def setup(args):
     # 001 classical image sr/ 002 lightweight image sr
     save_dir = f'results/SWIFT_lightweight_x{args.scale}'
@@ -239,7 +215,6 @@ def setup(args):
     window_size = 8
 
     return folder, save_dir, border, window_size
-
 
 def get_image_pair(args, path, attach_scale=True):
     (imgname, imgext) = os.path.splitext(os.path.basename(path))
@@ -263,7 +238,6 @@ def get_image_pair(args, path, attach_scale=True):
         exit(1)
 
     return imgname, img_lq, img_gt
-
 
 def test(img_lq, model, args, window_size):
     if args.tile is None:
@@ -292,6 +266,46 @@ def test(img_lq, model, args, window_size):
                 E[..., h_idx*sf:(h_idx+tile)*sf, w_idx*sf:(w_idx+tile)*sf].add_(out_patch)
                 W[..., h_idx*sf:(h_idx+tile)*sf, w_idx*sf:(w_idx+tile)*sf].add_(out_patch_mask)
         output = E.div_(W)
+
+    return output
+
+def forward_chop(model, x, scale, shave=10, min_size=30000):
+    n_GPUs = 1 #min(self.n_GPUs, 4)
+    b, c, h, w = x.size()
+    h_half, w_half = h // 2, w // 2
+    h_size, w_size = h_half + shave, w_half + shave
+    lr_list = [
+        x[:, :, 0:h_size, 0:w_size],
+        x[:, :, 0:h_size, (w - w_size):w],
+        x[:, :, (h - h_size):h, 0:w_size],
+        x[:, :, (h - h_size):h, (w - w_size):w]]
+
+    if w_size * h_size < min_size:
+        sr_list = []
+        for i in range(0, 4, n_GPUs):
+            lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
+            sr_batch = model(lr_batch)
+            sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
+    else:
+        sr_list = [
+            forward_chop(model, patch, scale, shave=shave, min_size=min_size) \
+            for patch in lr_list
+        ]
+
+    h, w = scale * h, scale * w
+    h_half, w_half = scale * h_half, scale * w_half
+    h_size, w_size = scale * h_size, scale * w_size
+    shave *= scale
+
+    output = x.new(b, c, h, w)
+    output[:, :, 0:h_half, 0:w_half] \
+        = sr_list[0][:, :, 0:h_half, 0:w_half]
+    output[:, :, 0:h_half, w_half:w] \
+        = sr_list[1][:, :, 0:h_half, (w_size - w + w_half):w_size]
+    output[:, :, h_half:h, 0:w_half] \
+        = sr_list[2][:, :, (h_size - h + h_half):h_size, 0:w_half]
+    output[:, :, h_half:h, w_half:w] \
+        = sr_list[3][:, :, (h_size - h + h_half):h_size, (w_size - w + w_half):w_size]
 
     return output
 

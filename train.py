@@ -22,49 +22,51 @@ from model.SWIFT import SWIFT
 from data import Set5_val, dataset
 from data.dataset import CPUPrefetcher, CUDAPrefetcher
 
-parser = argparse.ArgumentParser(description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fast Fouirer Convolutions")
+parser = argparse.ArgumentParser(
+    prog="train.py",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    formatter_class=argparse.MetavarTypeHelpFormatter,
+)
 
 # Training settings
-parser.add_argument("--lr", type=float, default=1e-4, help="Learning Rate. Default=3e-4")
-parser.add_argument("--n_epochs", type=int, default=100000, help="number of epochs to train")
-parser.add_argument("--batch_size", type=int, default=64, help="training batch size")
-parser.add_argument("--test_batch_size", type=int, default=1, help="testing batch size")
-parser.add_argument("--gamma", type=int, default=0.5, help="learning rate decay factor for step decay")
+parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate for training. Default=2e-4")
+parser.add_argument("--n_epochs", type=int, default=100000, help="Number of epochs to train model. By default model trains till 700K iterations.")
+parser.add_argument("--batch_size", type=int, default=64, help="Batch size to use for training. Default=64")
+parser.add_argument("--test_batch_size", type=int, default=1, help="Batch size to use for validation. Default=1")
+parser.add_argument("--gamma", type=int, default=0.5, help="Learning rate decay factor. Default=0.5")
 parser.add_argument("--step_size", type=int, default=100, help="learning rate decay per N epochs")
 
 # Dataset Args
-parser.add_argument("--root", type=str, default="./Datasets", help='dataset directory')
-parser.add_argument("--n_train", type=int, default=800, help="number of training set")
-parser.add_argument("--n_val", type=int, default=1, help="number of validation set")
+parser.add_argument("--root", type=str, default="./Datasets", help='Path to root of dataset directory. ')
+parser.add_argument("--n_train", type=int, default=800, help="Number of samples in training set. Default=800")
+parser.add_argument("--n_val", type=int, default=1, help="Number of images in validation set. Default=1")
 
 # GPU Args
-parser.add_argument("--cuda", action="store_true", default=True, help="use cuda")
-parser.add_argument("--threads", type=int, default=12, help="number of threads for data loading")
-parser.add_argument("--amp", action="store_true", default=False)
-parser.add_argument("--load_mem", action="store_true", default=False, help="load entire dataset to memory")
+parser.add_argument("--cuda", action="store_true", default=True, help="Use Cuda enabled devices for training")
+parser.add_argument("--threads", type=int, default=12, help="Number of workers for dataloader. Default=12")
+parser.add_argument("--amp", action="store_true", default=False, help="Enables Automatic Mixed Precision for training.")
+parser.add_argument("--load_mem", action="store_true", default=False, help="Loads entire dataset to RAM.")
 
 # Model Checkpointing Args
-parser.add_argument("--ckpt_dir", default="", type=str, help="path to checkpoint directory")
-parser.add_argument("--start_epoch", default=0, type=int, help="manual epoch number")
-parser.add_argument("--log_every", type=int, default=100, help="Logs every 'x' iterations")
-parser.add_argument("--test_every", type=int, default=1000, help="Tests every 'x' iterations")
-parser.add_argument("--save_every", type=int, default=1000, help="Saves model every 'x' iterations")
-parser.add_argument("--pretrained", default="", type=str, help="path to pretrained models")
-parser.add_argument("--resume", default="", type=str, help="path to checkpoint")
+parser.add_argument("--ckpt_dir", default="", type=str, help="Path to model checkpoint directory.")
+parser.add_argument("--start_epoch", default=0, type=int, help="Epoch number to resume training.")
+parser.add_argument("--log_every", type=int, default=100, help="Logs every 'x' iterations.")
+parser.add_argument("--test_every", type=int, default=1000, help="Tests every 'x' iterations.")
+parser.add_argument("--save_every", type=int, default=1000, help="Saves model every 'x' iterations.")
+parser.add_argument("--pretrained", default="", type=str, help="Path to pretrained model.")
+parser.add_argument("--resume", default="", type=str, help="Path to model checkpoint.")
 
 # Model Args
-parser.add_argument("--scale", type=int, default=2, help="super-resolution scale")
-parser.add_argument("--patch_size", type=int, default=128, help="output patch size")
-parser.add_argument("--rgb_range", type=int, default=1, help="maxium value of RGB")
-parser.add_argument("--n_colors", type=int, default=3, help="number of color channels to use")
+parser.add_argument("--scale", type=int, default=2, help="Super Resolution scale. Scales: 2, 3, 4.")
+parser.add_argument("--patch_size", type=int, default=128, help="Patch size to use for training. Patch Sizes: 128, 192, 256.")
+parser.add_argument("--rgb_range", type=int, default=1, help="Maxium value of RGB.")
+parser.add_argument("--n_colors", type=int, default=3, help="Number of color channels to use.")
 
 # Miscelaneous Args
-parser.add_argument("--seed", type=int, default=3407)
-parser.add_argument("--isY", action="store_true", default=False)
-parser.add_argument("--show_metrics", action="store_true", default=False)
-parser.add_argument("--ext", type=str, default='.png')
-parser.add_argument("--phase", type=str, default='train')
-parser.add_argument("--model", type=str, default='SWIFT')
+parser.add_argument("--seed", type=int, default=3407, help="Seed for reproducibility.")
+parser.add_argument("--show_metrics", action="store_true", default=False, help="Enables PSNR and SSIM calculation for training set.")
+parser.add_argument("--ext", type=str, default='.png', help="Image extension in the dataset.")
+parser.add_argument("--model", type=str, default='SWIFT', help="Name for the model.")
 
 args = parser.parse_args()
 

@@ -22,20 +22,24 @@ from util.calculate_psnr_ssim import calculate_psnr, calculate_ssim
 from fvcore.nn import FlopCountAnalysis, flop_count_table
 
 
-parser = argparse.ArgumentParser(description="TESTING")
-parser.add_argument("--test_batch_size", type=int, default=1,
-                    help="testing batch size")
-parser.add_argument("--scale", type=int, default=4,
-                    help="scale")
-parser.add_argument("--patch_size", type=int, default=256,
-                    help="patch size")
+parser = argparse.ArgumentParser(
+    prog="test.py",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    formatter_class=argparse.MetavarTypeHelpFormatter,
+)
+parser.add_argument("--batch_size", type=int, default=1,
+                    help="Batch size to use for testing. Default=1.")
+parser.add_argument("--scale", type=int, required=True,
+                    help="Super resolution scale. Scales: 2, 3, 4.")
+parser.add_argument("--patch_size", type=int, required=True,
+                    help="Patch size used for training SWIFT for the scale chosen. Patch Sizes: 128, 192, 256.")
 parser.add_argument("--model_path", type=str, required=True,
-                    help="path to trained model")
-parser.add_argument("--cuda", action="store_true", default=True,
-                    help="use cuda")
+                    help="Path to the trained SWIFT model.")
+parser.add_argument("--cuda", action="store_true", default=False,
+                    help="Use CUDA enabled device to perform testing.")
 parser.add_argument("--forward_chop", action="store_true", default=False,
-                    help="use forward chop")
-parser.add_argument("--seed", type=int, default=3407)
+                    help="Use forward_chop for performing inference on devices with less memory.")
+parser.add_argument("--seed", type=int, default=3407, help="Seed for reproducibility.")
 
 
 args = parser.parse_args()
@@ -47,7 +51,8 @@ if seed is None:
 random.seed(seed)
 torch.manual_seed(seed)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+cuda = args.cuda
+device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
 
 dataset_path = "./testsets/"
 
@@ -58,14 +63,13 @@ testset_Urban100 = prepare_testset.MakeTestSet(f"{dataset_path}Urban100/HR", Non
 testset_Set14 = prepare_testset.MakeTestSet(f"{dataset_path}Set14/HR", None, args.scale, args.patch_size)
 testset_Set5 = prepare_testset.MakeTestSet(f"{dataset_path}Set5/HR/", f"{dataset_path}Set5/LR/X{args.scale}/", args.scale, args.patch_size)
 
-BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
-General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
-Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
-Urban100_data_loader = DataLoader(dataset=testset_Urban100, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
-Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
-Set5_data_loader = DataLoader(dataset=testset_Set5, num_workers=0, batch_size=args.test_batch_size, shuffle=False)
+BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Urban100_data_loader = DataLoader(dataset=testset_Urban100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Set5_data_loader = DataLoader(dataset=testset_Set5, num_workers=0, batch_size=args.batch_size, shuffle=False)
 test_data_loader_dict = {"Set5": Set5_data_loader, "Set14": Set14_data_loader, "BSD100": BSDS100_data_loader, "Urban100": Urban100_data_loader, "Manga109": Manga109_data_loader, "General100": General100_data_loader}
-
 
 def print_network(net):
     num_params = 0
