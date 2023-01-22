@@ -8,8 +8,8 @@ This repository contains the official implementation for the paper titled _"Towa
 
 ## SWIFT for Lightweight Image Super Resolution
 
-<p float="left" align="center" padding="100px">
-  <img src="./doc/images/architecture.png" width=100%/>
+<p float="left" align="center" padding="300px">
+  <img src="./doc/images/architecture.png" width=90%/>
 </p>
 
 <p align="justify">
@@ -97,7 +97,7 @@ options:
   --amp                 Enables Automatic Mixed Precision for training.
   --load_mem            Loads entire dataset to RAM.
   --ckpt_dir str        Path to model checkpoint directory.
-  --start_epoch int     Epoch number to resume training.## BibTeX
+  --start_epoch int     Epoch number to resume training.
 ```
 
 To train SWIFT, please type the following commands in terminal
