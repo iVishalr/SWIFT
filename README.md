@@ -2,16 +2,37 @@
 
 [Vishal Ramesha](https://github.com/iVishalr), [Abhishek Aditya BS](https://github.com/Abhishek-Aditya-bs), [Yashas Kadambi](https://github.com/Yashas120), [T Vijay Prashant](https://github.com/tvijayprashant), [Shylaja S S](https://scholar.google.co.in/citations?user=X365OjgAAAAJ&hl=en)
 
-This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_ presented at NTIRE Workshop, CVPR 2023. SWIFT achieves state-of-the-art performance in the reigm of lightweight image super resolution. SWIFT outperforms SwinIR in several benchmarking datasets while using 33.55% less parameters.
+[[Paper]](#)
 
-&nbsp;
+This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_ presented at NTIRE Workshop, CVPR 2023.
+
+## SWIFT for Lightweight Image Super Resolution
 
 <p float="left" align="center" padding="100px">
   <img src="./doc/images/architecture.png" width=100%/>
 </p>
 
 <p align="justify">
-Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being 37% faster during inference.
+<i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being 37% faster during inference.</i>
+</p>
+
+## Results
+
+### Quantitative Comparisons
+
+The table below shows the quantitative comparisons of SWIFT with other state-of-the-art methods on Lightweight Image Super Resolution on popular benchmarking datasets. We compare models based on the scores achieved in PSNR and SSIM metrics. The first and second best methods have been highlighted with <span style="color:red">red</span> and <span style="color:blue">blue</span> respectively.
+
+<p float="left" align="center" padding="100px">
+  <img src="./doc/images/SWIFT-Results.png" width=100%/>
+</p>
+
+### Comparison on Inference Time
+
+The table below shows the comparison of inference time of state-of-the-art methods on benchmarking datasets for ×4 scale. The <span style="color:green">▼</span> symbol indicates improvement and <span style="color:red">▲</span> symbol indicates deterioration of inference time compared to the reference model. The reference model used for
+comparisons for different model architecture types is indicated by \* (asterisks).
+
+<p float="left" align="center" padding="100px">
+  <img src="./doc/images/SWIFT-Inference.png" width=100%/>
 </p>
 
 ## Training
@@ -76,20 +97,15 @@ options:
   --amp                 Enables Automatic Mixed Precision for training.
   --load_mem            Loads entire dataset to RAM.
   --ckpt_dir str        Path to model checkpoint directory.
-  --start_epoch int     Epoch number to resume training.
-  --log_every int       Logs every 'x' iterations.
-  --test_every int      Tests every 'x' iterations.
-  --save_every int      Saves model every 'x' iterations.
-  --pretrained str      Path to pretrained model.
-  --resume str          Path to model checkpoint.
-  --scale int           Super Resolution scale. Scales: 2, 3, 4.
-  --patch_size int      Patch size to use for training. Patch Sizes: 128, 192, 256.
-  --rgb_range int       Maxium value of RGB.
-  --n_colors int        Number of color channels to use.
-  --seed int            Seed for reproducibility.
-  --show_metrics        Enables PSNR and SSIM calculation for training set.
-  --ext str             Image extension in the dataset.
-  --model str           Name for the model.
+  --start_epoch int     Epoch number to resume training.## BibTeX
+
+    @InProceedings{wang2021realesrgan,
+        author    = {Xintao Wang and Liangbin Xie and Chao Dong and Ying Shan},
+        title     = {Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data},
+        booktitle = {International Conference on Computer Vision Workshops (ICCVW)},
+        date      = {2021}
+    }
+
 ```
 
 To train SWIFT, please type the following commands in terminal
@@ -201,6 +217,17 @@ options:
   --forward_chop      Use forward_chop for performing inference on devices with less memory.
   --summary           Print summary table for model.
 ```
+
+## Citation
+
+If you find our work useful in your works, please use the below citation. Thank You!
+
+    @InProceedings{ramesha2023towards,
+        author    = {Vishal Ramesha and Abhishek Aditya BS and Yashas Kadambi and T Vijay Prashant and Shylaja S S},
+        title     = {Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+        date      = {2023}
+    }
 
 ## License
 

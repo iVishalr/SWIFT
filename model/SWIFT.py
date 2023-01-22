@@ -4,34 +4,33 @@ import torch.nn.functional as F
 from timm.models.layers import trunc_normal_
 from model.attention import PatchEmbed, PatchUnEmbed, SwinTransformerBlockV2
 from model.modules import RFB, PixelShuffleUpsample, default_conv
-from typing import Tuple
+from typing import List, Tuple, Optional
 
 class FSTB(nn.Module):
     '''
     Fourier-Swin Transformer Block (FSTB)
     '''
     def __init__(self, 
-        in_channels, 
-        out_channels,
-        embd_dim, 
-        num_heads,
-        depth,
-        rfbs,
-        window_size,
-        img_size, 
-        mlp_ratio=0.5,
-        qkv_bias=True,
-        qk_scale=None,
-        drop=0.,
-        attn_drop=0.,
-        drop_path=0.,
-        patch_size=1, 
+        out_channels: int,
+        embd_dim: int, 
+        num_heads: int,
+        depth: int,
+        rfbs: int,
+        window_size: int,
+        img_size: int, 
+        mlp_ratio: float = 0.5,
+        qkv_bias: bool = True,
+        qk_scale: Optional[float] = None,
+        drop: Optional[float] = 0.,
+        attn_drop: Optional[float] = 0.,
+        drop_path: Optional[float] = 0.,
+        patch_size: int = 1, 
         norm_layer=nn.LayerNorm, 
         act_layer=nn.ReLU,
-        feat_scale=True,
-        attn_scale=False,
+        feat_scale: Optional[bool] = False,
+        attn_scale: Optional[bool] = True,
         residual_conv="1conv"
-    ):
+    ) -> None:
         
         super(FSTB, self).__init__()
         
@@ -118,30 +117,30 @@ class FSTB(nn.Module):
         
 class SWIFT(nn.Module):
     def __init__(self,
-        img_size=64,
-        patch_size=1, 
-        in_channels=3,
-        embd_dim=60,
-        depths=[6,6,6,6],
-        rfbs=[2,2,2,2],
-        num_heads=[6,6,6,6],
-        window_size=8,
-        mlp_ratio=0.5,
-        scale=2,
-        drop = 0.,
-        drop_path=0.1,
-        attn_drop = 0.,
-        qk_scale = None,
-        qkv_bias = True,
-        img_range=1.,
-        ape=False,
-        patch_norm=True,
-        residual_conv="3conv",
+        img_size: int = 64,
+        patch_size: int = 1, 
+        in_channels: int = 3,
+        embd_dim: int = 60,
+        depths: List[int] = [6,6,6,6],
+        rfbs: List[int] = [2,2,2,2],
+        num_heads: List[int] = [6,6,6,6],
+        window_size: int = 8,
+        mlp_ratio: float = 1,
+        scale: int = 2,
+        drop: Optional[float] = 0.,
+        drop_path: Optional[float] = 0.1,
+        attn_drop: Optional[float] = 0.,
+        qk_scale: Optional[float] = None,
+        qkv_bias: Optional[bool] = True,
+        img_range: Optional[float] = 1.,
+        ape: Optional[bool] = False,
+        patch_norm: Optional[bool] = True,
+        residual_conv: Optional[str] = "3conv",
         act_layer = nn.ReLU,
         norm_layer=nn.LayerNorm,
-        feat_scale=True,
-        attn_scale=False,
-        ):
+        feat_scale: Optional[bool] = True,
+        attn_scale: Optional[bool] = False,
+        ) -> None:
         
         super(SWIFT, self).__init__()
         
@@ -248,7 +247,7 @@ class SWIFT(nn.Module):
         self.tail = nn.Sequential(*modules_tail)
         self.apply(self._init_weights)
 
-    def check_image_size(self, x):
+    def check_image_size(self, x: torch.Tensor) -> torch.Tensor:
         _, _, h, w = x.size()
         mod_pad_h = (self.window_size - h % self.window_size) % self.window_size
         mod_pad_w = (self.window_size - w % self.window_size) % self.window_size
