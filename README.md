@@ -98,14 +98,6 @@ options:
   --load_mem            Loads entire dataset to RAM.
   --ckpt_dir str        Path to model checkpoint directory.
   --start_epoch int     Epoch number to resume training.## BibTeX
-
-    @InProceedings{wang2021realesrgan,
-        author    = {Xintao Wang and Liangbin Xie and Chao Dong and Ying Shan},
-        title     = {Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data},
-        booktitle = {International Conference on Computer Vision Workshops (ICCVW)},
-        date      = {2021}
-    }
-
 ```
 
 To train SWIFT, please type the following commands in terminal
