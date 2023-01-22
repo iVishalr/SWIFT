@@ -8,7 +8,7 @@ from typing import Tuple
 
 class FSTB(nn.Module):
     '''
-    Fourier-Swin-Transformer-block
+    Fourier-Swin Transformer Block (FSTB)
     '''
     def __init__(self, 
         in_channels, 
@@ -96,7 +96,7 @@ class FSTB(nn.Module):
                 nn.Conv2d(embd_dim // 4, embd_dim, 3, 1, 1)
             )
 
-    def forward(self, x, x_size: Tuple[int, int]):
+    def forward(self, x: torch.Tensor, x_size: Tuple[int, int]) -> torch.Tensor:
         out = x
 
         if self.depth != 0:
@@ -255,14 +255,13 @@ class SWIFT(nn.Module):
         x = F.pad(x, (0, mod_pad_w, 0, mod_pad_h), 'reflect')
         return x
 
-    def forward_features(self, x):
+    def forward_features(self, x: torch.Tensor) -> torch.Tensor:
         x_size = (x.shape[2], x.shape[3])
         for layer in self.layers:
             x = layer(x, x_size)
-        
         return x
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         H,W = x.shape[2:]
         x = self.check_image_size(x)
         self.mean = self.mean.type_as(x)

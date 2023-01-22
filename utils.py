@@ -10,15 +10,47 @@ warnings.filterwarnings("ignore")
 
 import time
 class Timer():
+    def __init__(self) -> None:
+        self.device: str = None
+        self.start = None
+        self.end = None
 
-    def __init__(self):
-        self.v = time.time()
+    def record(self) -> None:
+        self.reset()
+        if self.device == "cuda":
+            self.start.record()
+        else:
+            self.start = time.time()
 
-    def s(self):
-        self.v = time.time()
+    def stop(self) -> None:
+        if self.device == "cuda":
+            self.end.record()
+        else:
+            self.end = time.time()
+    
+    def sync(self) -> None:
+        if self.device == "cuda":
+            torch.cuda.current_stream().synchronize()
 
-    def t(self):
-        return time.time() - self.v
+    def get_elapsed_time(self):
+        if self.device == "cuda":
+            return self.start.elapsed_time(self.end)
+        else:
+            return self.end - self.start 
+    
+    def to(self, device) -> None:
+        self.device = device
+
+    def reset(self) -> None:
+        if self.device == "cuda":
+            self.start = torch.cuda.Event(enable_timing=True)
+        else:
+            self.start = 0
+    
+        if self.device == "cuda":
+            self.end = torch.cuda.Event(enable_timing=True)
+        else:
+            self.end = 0
 
 
 def time_text(t):

@@ -72,7 +72,6 @@ def main():
     parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
     parser.add_argument('--forward_chop', default=False, action="store_true", help='Use Forward Chop.')
 
-
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -92,8 +91,25 @@ def main():
     model = model.to(device)
 
     if args.jit:
-        print("Using JIT")
-        model = torch.jit.script(model, example_inputs=(torch.randn(1,3,256,256, dtype=torch.float32, device=device),))
+        print("Using JIT for Optimizing Model Inference")
+        x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
+        y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
+        inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+        x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+        x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+
+        model.head = torch.jit.trace(model.head, example_inputs=[(x)])
+        model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
+        model.conv_before_upsample = torch.jit.trace(model.conv_before_upsample, example_inputs=[(y)])
+        model.tail = torch.jit.trace(model.tail, example_inputs=[(y)])
+
+        for i, layers in enumerate(model.layers):
+            # select RFB from each layer and optimise non ffc parts
+            for j, rfb in enumerate(layers.rfbs):
+                model.layers[i].rfbs[j].downsample = torch.jit.trace(rfb.downsample, example_inputs=[(inp1)])
+                model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
+                model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
+                model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
 
     folder, save_dir, border, window_size = setup(args)
     os.makedirs(save_dir, exist_ok=True)

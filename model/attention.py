@@ -37,7 +37,7 @@ def drop_path(x: torch.Tensor, drop_prob: float = 0., training: bool = False) ->
     output = x.div(keep_prob) * random_tensor
     return output
 
-def window_partition(x: torch.Tensor, window_size: int):
+def window_partition(x: torch.Tensor, window_size: int) -> torch.Tensor:
     """
     Args:
         x: (B, H, W, C)
@@ -51,7 +51,7 @@ def window_partition(x: torch.Tensor, window_size: int):
     return windows
 
 
-def window_reverse(windows: torch.Tensor, window_size: int, H: int, W: int):
+def window_reverse(windows: torch.Tensor, window_size: int, H: int, W: int) -> torch.Tensor:
     """
     Args:
         windows: (num_windows*B, window_size, window_size, C)
@@ -79,8 +79,15 @@ class WindowAttentionV2(nn.Module):
         pretrained_window_size (tuple[int]): The height and width of the window in pre-training.
     """
 
-    def __init__(self, dim, window_size, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0.,
-                 pretrained_window_size=[0, 0], attn_scale=False) -> None:
+    def __init__(self, 
+        dim: int, 
+        window_size: Tuple[int,int], 
+        num_heads: int, 
+        qkv_bias: Optional[bool] = True, 
+        attn_drop: Optional[float] = 0., 
+        proj_drop: Optional[float] = 0.,
+        pretrained_window_size: Tuple[int,int] = [0, 0], 
+        attn_scale: Optional[bool] = True) -> None:
 
         super().__init__()
         self.dim = dim
@@ -244,7 +251,8 @@ class SwinTransformerBlockV2(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
     """
 
-    def __init__(self, dim, 
+    def __init__(self, 
+        dim: int, 
         input_resolution: Tuple[int, int], 
         num_heads: int, 
         window_size: int = 7, 
@@ -257,9 +265,10 @@ class SwinTransformerBlockV2(nn.Module):
         drop_path: float =0.,
         act_layer=nn.GELU, 
         norm_layer=nn.LayerNorm, 
-        feat_scale: bool = True, 
-        attn_scale: bool = False
-        ):
+        feat_scale: bool = False, 
+        attn_scale: bool = True
+        ) -> None:
+
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -435,7 +444,6 @@ class PatchEmbed(nn.Module):
         if self.norm is not None:
             flops += H * W * self.embed_dim
         return flops
-
 
 class PatchUnEmbed(nn.Module):
     r""" Image to Patch Unembedding

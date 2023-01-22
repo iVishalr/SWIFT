@@ -89,7 +89,7 @@ class FourierUnit(nn.Module):
         self.fft_norm = fft_norm
 
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch = x.shape[0]
 
         if self.spatial_scale_factor is not None:
@@ -158,7 +158,7 @@ class SpectralTransform(nn.Module):
             out_channels // 2, out_channels, kernel_size=1, groups=groups, bias=False)
 
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
 
         x = self.downsample(x)
         x = self.conv1(x)
@@ -271,7 +271,7 @@ class FFC(nn.Module):
         self.gate = module(in_channels, 2, 1)
 
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         B,C,H,W = x.size()
         # print(x.size())
         # x_l, x_g = x if type(x) is tuple else (x, 0)
@@ -325,7 +325,7 @@ class FFC_BN_ACT(nn.Module):
         self.act_g = gact()
         
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_ffc = self.ffc(x)
         B,C,H,W = x_ffc.size()
         x_l, x_g = x_ffc[:,:C//2], x_ffc[:,C//2:]

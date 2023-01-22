@@ -4,6 +4,7 @@ import einops
 import torch.nn as nn
 import torch.nn.functional as F
 from model.ffc import FFC_BN_ACT
+from typing import List, Tuple, Optional
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True, groups = 1):
     wn = lambda x:torch.nn.utils.weight_norm(x)
@@ -12,14 +13,15 @@ def default_conv(in_channels, out_channels, kernel_size, bias=True, groups = 1):
         padding=(kernel_size//2), bias=bias, groups = groups)
 
 class Scale(nn.Module):
-    def __init__(self, value=1e-3) -> None:
+    def __init__(self, value: Optional[float]=1e-3) -> None:
         super(Scale, self).__init__()
         self.scale = nn.Parameter(torch.FloatTensor([value]))
-    def forward(self, x):
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * self.scale
 
 class Swish(nn.Module):
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * torch.sigmoid(x)
 
 def default(val, d):
@@ -60,7 +62,7 @@ class PixelShuffleUpsample(nn.Module):
         conv.weight.data.copy_(conv_weight)
         nn.init.zeros_(conv.bias.data)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
 class one_conv(nn.Module):
@@ -72,7 +74,8 @@ class one_conv(nn.Module):
         if relu:
             self.relu = nn.PReLU(growth_rate)
         self.w = Scale(1.)
-    def forward(self,x):
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.flag == False:
             output = x + self.w(self.conv1(self.conv(x)))
         else:
@@ -96,7 +99,7 @@ class RFB(nn.Module):
         self.scam = SCAM(out_channels // 2, True)
         self.conv1x1 = nn.Conv2d(out_channels // 2, out_channels // 2, 1, 1, 0)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         B,C,H,W = x.size()
 
         in_xl, in_xg = x[:,:C//2], x[:,C//2:]
@@ -132,7 +135,7 @@ class SCAM(nn.Module):
         self.v1 = nn.Linear(channels, channels, bias=bias)
         self.v2 = nn.Linear(channels, channels, bias=bias)
 
-    def forward(self, x_l: torch.Tensor, x_h: torch.Tensor):
+    def forward(self, x_l: torch.Tensor, x_h: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         
         B,C,H,W = x_l.size()
 
