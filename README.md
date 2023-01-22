@@ -4,6 +4,8 @@
 
 This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_ presented at NTIRE Workshop, CVPR 2023. SWIFT achieves state-of-the-art performance in the reigm of lightweight image super resolution. SWIFT outperforms SwinIR in several benchmarking datasets while using 33.55% less parameters.
 
+&nbsp;
+
 <p float="left" align="center" padding="100px">
   <img src="./doc/images/architecture.png" width=100%/>
 </p>
@@ -132,19 +134,21 @@ Other options provided by the `test.py` are shown below
 
 ```console
 $ python3 test.py --help
-usage: test.py [-h] [--batch_size int] --scale int --patch_size int --model_path str [--cuda] [--forward_chop] [--seed int]
+usage: test.py [-h] --scale int --patch_size int --model_path str [--batch_size int] [--cuda] [--jit] [--forward_chop] [--seed int] [--summary]
 
 Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
 
 options:
   -h, --help        show this help message and exit
-  --batch_size int  Batch size to use for testing. Default=1.
   --scale int       Super resolution scale. Scales: 2, 3, 4.
   --patch_size int  Patch size used for training SWIFT for the scale chosen. Patch Sizes: 128, 192, 256.
   --model_path str  Path to the trained SWIFT model.
+  --batch_size int  Batch size to use for testing. Default=1.
   --cuda            Use CUDA enabled device to perform testing.
+  --jit             Perform inference using JIT.
   --forward_chop    Use forward_chop for performing inference on devices with less memory.
   --seed int        Seed for reproducibility.
+  --summary         Print summary table for model.
 ```
 
 `test.py` script does not store the predictions in files. Please see the next section for storing the results from SWIFT. Using `--forward_chop` redcues memory consumption but results in lower PSNR and SSIM scores compared to the reported scores.
@@ -180,7 +184,7 @@ The complete list of options provided by `predict.py` script is shown below
 
 ```console
 $ python3 predict.py --help
-usage: predict.py [-h] --scale int --model_path str --folder_lq str [--folder_gt str] [--tile int] [--tile_overlap int] [--cuda] [--jit] [--forward_chop]
+usage: predict.py [-h] --scale int --model_path str --folder_lq str [--folder_gt str] [--tile int] [--tile_overlap int] [--cuda] [--jit] [--forward_chop] [--summary]
 
 Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
 
@@ -190,11 +194,12 @@ options:
   --model_path str    Path to the trained SWIFT model.
   --folder_lq str     Path to low-quality (LR) test image folder.
   --folder_gt str     Path to ground-truth (HR) test image folder. (Optional)
-  --tile int          Tile size, None for no tile during testing (testing as a whole).
-  --tile_overlap int  Overlapping of different tiles.
+  --tile int          Tile size, None for no tile during testing (testing as a whole)
+  --tile_overlap int  Overlapping of different tiles
   --cuda              Use CUDA enabled device for inference.
   --jit               Perform inference using JIT.
   --forward_chop      Use forward_chop for performing inference on devices with less memory.
+  --summary           Print summary table for model.
 ```
 
 ## License

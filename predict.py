@@ -3,13 +3,15 @@ import cv2
 import glob
 import argparse
 import requests
-from collections import OrderedDict
 
 import numpy as np
 import torch
 import torch.nn as nn
-from util import calculate_psnr_ssim as util
+from utils import Timer
 from model.SWIFT import SWIFT
+from collections import OrderedDict
+from util import calculate_psnr_ssim as util
+from fvcore.nn import FlopCountAnalysis, flop_count_table
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -34,6 +36,7 @@ def main():
     parser.add_argument('--cuda', default=False, action="store_true", help='Use CUDA enabled device for inference.')
     parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
     parser.add_argument('--forward_chop', default=False, action="store_true", help="Use forward_chop for performing inference on devices with less memory.")
+    parser.add_argument("--summary", action="store_true", default=False,help="Print summary table for model.")
 
     args = parser.parse_args()
     
@@ -47,6 +50,24 @@ def main():
         device_str = "CPU"
 
     print(f"-> Running Inference on {device_str}.")
+
+    def print_network(net):
+        num_params = 0
+        for param in net.parameters():
+            num_params += param.numel()
+        
+        input_tensor = torch.randn(1,3,64,64, device=device)
+        
+        flops = FlopCountAnalysis(net, input_tensor)
+        table = flop_count_table(flops)
+        print("\nFLOP Analysis Table")
+        print("-" * len(table.split("\n")[0]))
+        print(table)
+        print("-" * len(table.split("\n")[0]))
+        print()
+
+        print('\nTotal Number of FLOPs: {:.2f} G'.format(flops.total() / 1e9))
+        print('\nTotal number of parameters: %d\n' % num_params)
 
     # set up model
     if os.path.exists(args.model_path):
@@ -62,6 +83,10 @@ def main():
     model.eval()
     model = model.to(device)
     print(f"-> Model Built for Inference on {device_str}.")
+
+    if args.summary:
+        print(f"-> Printing Model Summary.")
+        print_network(model)
 
     if args.jit:
         print("-> Using JIT for Optimizing Model Inference.")
@@ -94,8 +119,10 @@ def main():
     test_results['ssim_y'] = []
 
     psnr, ssim, psnr_y, ssim_y, avg_time = 0, 0, 0, 0, []
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
+    
+    timer = Timer()
+    timer.to("cuda" if cuda and torch.cuda.is_available() else "cpu")
+
     gpu_memory = []
     
     img_gt, img_lq = None, None
@@ -119,18 +146,18 @@ def main():
             img_lq = torch.cat([img_lq, torch.flip(img_lq, [3])], 3)[:, :, :, :w_old + w_pad]
             
             if args.forward_chop:
-                start.record()
+                timer.record()
                 output = forward_chop(model, img_lq, scale=args.scale)
-                end.record()
+                timer.stop()
                 gpu_memory.append(torch.cuda.max_memory_allocated() // 1024 // 1024)
             else:
-                start.record()
+                timer.record()
                 output = test(img_lq, model, args, window_size)
-                end.record()
+                timer.stop()
                 gpu_memory.append(torch.cuda.max_memory_allocated() // 1024 // 1024)
 
-            torch.cuda.current_stream().synchronize()
-            avg_time.append(start.elapsed_time(end))
+            timer.sync()
+            avg_time.append(timer.get_elapsed_time())
             output = output[..., :h_old * args.scale, :w_old * args.scale]
 
         # save image
@@ -159,9 +186,9 @@ def main():
 
             print('Testing {:d} {:20s} - PSNR: {:.2f} dB; SSIM: {:.4f};'
                   ' PSNR_Y: {:.2f} dB; SSIM_Y: {:.4f}; Inference Time: {:.2f}ms'.
-                  format(idx+1, imgname, psnr, ssim, psnr_y, ssim_y, (start.elapsed_time(end))))
+                  format(idx+1, imgname, psnr, ssim, psnr_y, ssim_y, (timer.get_elapsed_time())))
         else:
-            print('Testing {:d} {:20s} Inference time: {:.2f}ms'.format(idx+1, imgname, (start.elapsed_time(end))))
+            print('Testing {:d} {:20s} Inference time: {:.2f}ms'.format(idx+1, imgname, (timer.get_elapsed_time())))
     
     # summarize psnr/ssim
     if img_gt is not None:

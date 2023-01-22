@@ -27,20 +27,21 @@ parser = argparse.ArgumentParser(
     description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
     formatter_class=argparse.MetavarTypeHelpFormatter,
 )
-parser.add_argument("--batch_size", type=int, default=1,
-                    help="Batch size to use for testing. Default=1.")
 parser.add_argument("--scale", type=int, required=True,
                     help="Super resolution scale. Scales: 2, 3, 4.")
 parser.add_argument("--patch_size", type=int, required=True,
                     help="Patch size used for training SWIFT for the scale chosen. Patch Sizes: 128, 192, 256.")
 parser.add_argument("--model_path", type=str, required=True,
                     help="Path to the trained SWIFT model.")
+parser.add_argument("--batch_size", type=int, default=1,
+                    help="Batch size to use for testing. Default=1.")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Use CUDA enabled device to perform testing.")
+parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
 parser.add_argument("--forward_chop", action="store_true", default=False,
                     help="Use forward_chop for performing inference on devices with less memory.")
 parser.add_argument("--seed", type=int, default=3407, help="Seed for reproducibility.")
-
+parser.add_argument("--summary", action="store_true", default=False,help="Print summary table for model.")
 
 args = parser.parse_args()
 
@@ -53,6 +54,14 @@ torch.manual_seed(seed)
 
 cuda = args.cuda
 device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
+
+device_str = None
+if cuda and torch.cuda.is_available():
+    device_str = torch.cuda.get_device_name(0) + " GPU"
+else:
+    device_str = "CPU"
+
+print(f"-> Running Testing on {device_str}.")
 
 dataset_path = "./testsets/"
 
@@ -171,25 +180,57 @@ def test(model_path, model_type="small"):
     ]
 
     models = []
-
+    i = 1
     for model_path, model_weights in model_paths:
         model = copy.deepcopy(base_model)
-        print("loading :", model_path)
+        print(f"-> Loading Model-{i} from", model_path)
         checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model'], strict=True)
 
         model.to(device)
         model.eval()
-        models.append((model, model_weights))
 
-    print("Starting to Test")
+        if args.summary:
+            print(f"-> Printing Model-{i} Summary.")
+            print_network(model)
+
+        if args.jit:
+            print(f"-> Using JIT for Optimizing Model-{i} Inference.")
+            x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
+            y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
+            inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+            x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+            x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+
+            model.head = torch.jit.trace(model.head, example_inputs=[(x)])
+            model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
+            model.conv_before_upsample = torch.jit.trace(model.conv_before_upsample, example_inputs=[(y)])
+            model.tail = torch.jit.trace(model.tail, example_inputs=[(y)])
+
+            for i, layers in enumerate(model.layers):
+                # select RFB from each layer and optimise non ffc parts
+                for j, rfb in enumerate(layers.rfbs):
+                    model.layers[i].rfbs[j].downsample = torch.jit.trace(rfb.downsample, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
+            print("-> JIT Optimization Completed.")
+
+        models.append((model, model_weights))
+        i+=1
+
+    print(f"-> Model(s) Built for Testing on {device_str}.")
+
+    timer = utils.Timer()
+    timer.to("cuda" if cuda and torch.cuda.is_available() else "cpu")
+
+    print("-> Testing Started.")
     for testset, test_data_loader in test_data_loader_dict.items():
         test_iter = 1
         avg_psnr_y, avg_ssim_y = 0, 0
 
-        start = []
-        end = []
-        print(f"Testset : {testset}")
+        elapsed_time = []
+        print(f"\n-> Testing SWIFT(x{args.scale}) on {testset} dataset.")
         if not testset == "Set5" and not testset == "Personal":
 
             if not os.path.exists(os.path.join(dataset_path, testset, "LR", f"X{args.scale}")):
@@ -201,8 +242,8 @@ def test(model_path, model_type="small"):
             num_lr_imgs = len(sorted([x for x in os.listdir(lr_save_path) if x != ".DS_Store"]))
             num_hr_imgs = len(sorted([x for x in os.listdir(os.path.join(dataset_path, testset, "HR")) if x != ".DS_Store"]))
 
-            print(f"Number of HR Images : {num_hr_imgs}")
-            print(f"Number of LR Images : {num_lr_imgs}")
+            print(f"=: Number of HR Images : {num_hr_imgs}")
+            print(f"=: Number of LR Images : {num_lr_imgs}")
 
             if not num_hr_imgs == num_lr_imgs:
                 print(f"Dataset Missing! Generating LR images for X{args.scale} scale.")
@@ -218,10 +259,9 @@ def test(model_path, model_type="small"):
         for i, batch in enumerate(test_data_loader):
             lr_tensor, hr_tensor = batch["lr"], batch["hr"]
             _,_, h_old, w_old = lr_tensor.size()
-
-            if args.cuda:
-                lr_tensor = lr_tensor.to(device)
-                hr_tensor = hr_tensor.to(device)
+            
+            lr_tensor = lr_tensor.to(device)
+            hr_tensor = hr_tensor.to(device)
 
             with torch.no_grad():
                 _, _, h_old, w_old = lr_tensor.size()
@@ -231,18 +271,24 @@ def test(model_path, model_type="small"):
                 lr_tensor = torch.cat([lr_tensor, torch.flip(lr_tensor, [3])], 3)[:, :, :, :w_old + w_pad]
 
                 if args.forward_chop:
-                    start.append(time.time())
-                    pre = forward_chop(model, lr_tensor, args.scale) # saves memory on during testing on very large images
-                    end.append(time.time()-start[-1])
+                    timer.record()
+                    for model,w in models:
+                        pre = forward_chop(model, lr_tensor, args.scale) # saves memory on during testing on very large images
+                        pre = pre[..., :h_old * args.scale, :w_old * args.scale]
+                        pred.append((pre,w))
+                    timer.stop()
                 else:
-                    start.append(time.time())
+                    timer.record()
                     pre = None
                     pred = []
                     for model,w in models:
                         pre = model(lr_tensor)
                         pre = pre[..., :h_old * args.scale, :w_old * args.scale]
                         pred.append((pre,w))
-                    end.append(time.time()-start[-1])
+                    timer.stop()
+                
+                timer.sync()
+                elapsed_time.append(timer.get_elapsed_time())
 
             for pre,w in pred:
                 sr_img = utils.tensor2np(pre.detach()[0])
@@ -266,7 +312,8 @@ def test(model_path, model_type="small"):
             test_iter += 1
         
         if testset !='Personal':
-            print("===> {} PSNR_Y: {:.4f}, SSIM_Y: {:.4f} AVG_TIME: {:.4f}".format(testset ,avg_psnr_y / len(test_data_loader), avg_ssim_y / len(test_data_loader), sum(end) / len(test_data_loader)))
+            print("=> {} PSNR_Y: {:.4f} dB; SSIM_Y: {:.4f}; Testing Time: {:.4f}ms".format(testset ,avg_psnr_y / len(test_data_loader), avg_ssim_y / len(test_data_loader), sum(elapsed_time) / len(test_data_loader)))
 
+    print("\n-> Testing Completed.")
 if __name__ == "__main__":
     test(args.model_path, model_type='small')
