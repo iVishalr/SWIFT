@@ -183,7 +183,6 @@ class SWIFT(nn.Module):
         
         for i_layer in range(self.num_layers):
             layer = FSTB(
-                in_channels=embd_dim,
                 out_channels=embd_dim,
                 embd_dim=embd_dim,
                 depth=depths[i_layer],

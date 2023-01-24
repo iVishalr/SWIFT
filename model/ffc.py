@@ -105,11 +105,11 @@ class FourierUnit(nn.Module):
         ffted = ffted.permute(0, 1, 4, 2, 3).contiguous()  # (batch, c, 2, h, w/2+1)
         ffted = ffted.view((batch, -1,) + ffted.size()[3:])
 
-        if self.spectral_pos_encoding:
-            height, width = ffted.shape[-2:]
-            coords_vert = torch.linspace(0, 1, height)[None, None, :, None].expand(batch, 1, height, width).to(ffted)
-            coords_hor = torch.linspace(0, 1, width)[None, None, None, :].expand(batch, 1, height, width).to(ffted)
-            ffted = torch.cat((coords_vert, coords_hor, ffted), dim=1)
+        # if self.spectral_pos_encoding:
+        #     height, width = ffted.shape[-2:]
+        #     coords_vert = torch.linspace(0, 1, height)[None, None, :, None].expand(batch, 1, height, width).to(ffted)
+        #     coords_hor = torch.linspace(0, 1, width)[None, None, None, :].expand(batch, 1, height, width).to(ffted)
+        #     ffted = torch.cat((coords_vert, coords_hor, ffted), dim=1)
 
         # if self.use_se:
         #     ffted = self.se(ffted)
@@ -279,16 +279,18 @@ class FFC(nn.Module):
         out_xl: torch.Tensor = torch.zeros(1, device=x.device)
         out_xg: torch.Tensor = torch.zeros(1, device=x.device)
 
-        if self.gated:
-            total_input_parts = [x_l]
-            if torch.as_tensor(x_g):
-                total_input_parts.append(x_g)
-            total_input = torch.cat(total_input_parts, dim=1)
+        # if self.gated:
+        #     total_input_parts = [x_l]
+        #     if torch.as_tensor(x_g):
+        #         total_input_parts.append(x_g)
+        #     total_input = torch.cat(total_input_parts, dim=1)
 
-            gates = torch.sigmoid(self.gate(total_input))
-            g2l_gate, l2g_gate = gates.chunk(2, dim=1)
-        else:
-            g2l_gate, l2g_gate = torch.ones(1, device=x.device), torch.ones(1, device=x.device)
+        #     gates = torch.sigmoid(self.gate(total_input))
+        #     g2l_gate, l2g_gate = gates.chunk(2, dim=1)
+        # else:
+        #     g2l_gate, l2g_gate = torch.ones(1, device=x.device), torch.ones(1, device=x.device)
+
+        g2l_gate, l2g_gate = 1, 1
 
         if self.ratio_gout != 1:
             out_xl = self.convl2l(x_l) + self.convg2l(x_g) * g2l_gate
@@ -324,7 +326,6 @@ class FFC_BN_ACT(nn.Module):
         self.act_l = lact()
         self.act_g = gact()
         
-    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_ffc = self.ffc(x)
         B,C,H,W = x_ffc.size()

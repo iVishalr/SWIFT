@@ -90,11 +90,12 @@ def main():
 
     if args.jit:
         print("-> Using JIT for Optimizing Model Inference.")
-        x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
-        y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
-        inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-        x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-        x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+        x = torch.randn(1,3,128,128, dtype=torch.float32, device=device)
+        y = torch.randn(1,64,128,128, dtype=torch.float32, device=device)
+
+        inp1 = torch.randn(1,32,128,128, dtype=torch.float32, device=device)
+        x_h = torch.randn(1,32,128,128, dtype=torch.float32, device=device)
+        x_l = torch.randn(1,32,128,128, dtype=torch.float32, device=device)
 
         model.head = torch.jit.trace(model.head, example_inputs=[(x)])
         model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
@@ -225,7 +226,7 @@ def define_model(args):
 
     param_key_g = "model"
     model = swift
-    pretrained_model = torch.load(args.model_path, map_location="cpu")
+    pretrained_model = torch.load(args.model_path, map_location="cuda" if args.cuda and torch.cuda.is_available() else "cpu")
     model.load_state_dict(pretrained_model[param_key_g] if param_key_g in pretrained_model.keys() else pretrained_model, strict=True)
     return model
 

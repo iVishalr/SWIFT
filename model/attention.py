@@ -166,7 +166,7 @@ class WindowAttentionV2(nn.Module):
 
         # cosine attention
         attn = (F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
-        logit_scale = torch.clamp(self.logit_scale, max=torch.log(torch.tensor(1. / 0.01, device=x.device))).exp()
+        logit_scale = torch.clamp(self.logit_scale, max=math.log(1. / 0.01)).exp()
         attn = attn * logit_scale
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
@@ -185,7 +185,7 @@ class WindowAttentionV2(nn.Module):
             attn = self.softmax(attn)
 
         if self.attn_scale:
-            attn_d = torch.ones(attn.shape[-2:], device=attn.device) / (N)    # [l, l]
+            attn_d = torch.ones(attn.shape[-2:], device=x.device) / (N)    # [l, l]
             attn_d = attn_d[None, None, ...]                                # [B, N, l, l]
             attn_h = attn - attn_d                                          # [B, N, l, l]
             attn_h = attn_h * (1. + self.lamb[None, :, None, None])         # [B, N, l, l]
@@ -298,31 +298,54 @@ class SwinTransformerBlockV2(nn.Module):
             attn_mask = self.calculate_mask(self.input_resolution)
         else:
             attn_mask = None
+
         self.lamb1 = nn.Parameter(torch.zeros(dim), requires_grad=True)
         self.lamb2 = nn.Parameter(torch.zeros(dim), requires_grad=True)
         self.register_buffer("attn_mask", attn_mask)
 
-    @torch.jit.ignore()
-    def calculate_mask(self, x_size: Tuple[int, int]) -> torch.Tensor:
+    # @torch.jit.ignore()
+    def calculate_mask(self, x_size: Tuple[int, int], device: torch.device=None) -> torch.Tensor:
         # calculate attention mask for SW-MSA
-        H, W = x_size
-        img_mask = torch.zeros((1, H, W, 1))  # 1 H W 1
-        h_slices = (slice(0, -self.window_size),
-                    slice(-self.window_size, -self.shift_size),
-                    slice(-self.shift_size, None))
-        w_slices = (slice(0, -self.window_size),
-                    slice(-self.window_size, -self.shift_size),
-                    slice(-self.shift_size, None))
-        cnt = 0
-        for h in h_slices:
-            for w in w_slices:
-                img_mask[:, h, w, :] = cnt
-                cnt += 1
+        # H, W = x_size
+        # img_mask = torch.zeros((1, H, W, 1))  # 1 H W 1
+        # h_slices = (slice(0, -self.window_size),
+        #             slice(-self.window_size, -self.shift_size),
+        #             slice(-self.shift_size, None))
+        # w_slices = (slice(0, -self.window_size),
+        #             slice(-self.window_size, -self.shift_size),
+        #             slice(-self.shift_size, None))
+        # cnt = 0
+        # for h in h_slices:
+        #     for w in w_slices:
+        #         img_mask[:, h, w, :] = cnt
+        #         cnt += 1
 
-        mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
-        mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
-        attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
-        attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+        # mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
+        # mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
+        # attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
+        # attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+
+        if self.shift_size > 0:
+             # calculate attention mask for SW-MSA
+            H, W = x_size
+            img_mask = torch.zeros((1, H, W, 1), device=device)  # 1 H W 1
+            cnt = 0
+            for h in (
+                    slice(0, -self.window_size),
+                    slice(-self.window_size, -self.shift_size),
+                    slice(-self.shift_size, None)):
+                for w in (
+                        slice(0, -self.window_size),
+                        slice(-self.window_size, -self.shift_size),
+                        slice(-self.shift_size, None)):
+                    img_mask[:, h, w, :] = cnt
+                    cnt += 1
+            mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
+            mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
+            attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
+            attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+        else:
+            attn_mask = None
 
         return attn_mask
 
@@ -353,7 +376,7 @@ class SwinTransformerBlockV2(nn.Module):
         if self.input_resolution == x_size:
             attn_windows = self.attn(x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size, C
         else:
-            attn_windows = self.attn(x_windows, mask=self.calculate_mask(x_size).to(x.device))
+            attn_windows = self.attn(x_windows, mask=self.calculate_mask(x_size, x.device))
 
         # merge windows
         attn_windows = attn_windows.view(-1, self.window_size, self.window_size, C)

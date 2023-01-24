@@ -20,13 +20,13 @@ class Timer():
         if self.device == "cuda":
             self.start.record()
         else:
-            self.start = time.time()
+            self.start = time.time_ns()
 
     def stop(self) -> None:
         if self.device == "cuda":
             self.end.record()
         else:
-            self.end = time.time()
+            self.end = time.time_ns()
     
     def sync(self) -> None:
         if self.device == "cuda":
@@ -36,7 +36,7 @@ class Timer():
         if self.device == "cuda":
             return self.start.elapsed_time(self.end)
         else:
-            return self.end - self.start 
+            return (self.end - self.start)/1e6
     
     def to(self, device) -> None:
         self.device = device
