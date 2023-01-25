@@ -1,23 +1,17 @@
-import os, gc
-import random
-import argparse
-import datetime
-
+import os
 import copy
-import time
 import utils
 import torch
-import numpy as np
+import random
+import argparse
+
 import torch.nn as nn
-import torch.optim as optim
-import skimage.color as sc
+from torch.utils.data import DataLoader
+
+from model.SWIFT import SWIFT
+from data.testset import TestSet
 
 from PIL import Image
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-from model.SWIFT import SWIFT
-from data import prepare_testset
-
 from util.calculate_psnr_ssim import calculate_psnr, calculate_ssim
 from fvcore.nn import FlopCountAnalysis, flop_count_table
 
@@ -27,19 +21,12 @@ parser = argparse.ArgumentParser(
     description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
     formatter_class=argparse.MetavarTypeHelpFormatter,
 )
-parser.add_argument("--scale", type=int, required=True,
-                    help="Super resolution scale. Scales: 2, 3, 4.")
-parser.add_argument("--patch_size", type=int, required=True,
-                    help="Patch size used for training SWIFT for the scale chosen. Patch Sizes: 128, 192, 256.")
-parser.add_argument("--model_path", type=str, required=True,
-                    help="Path to the trained SWIFT model.")
-parser.add_argument("--batch_size", type=int, default=1,
-                    help="Batch size to use for testing. Default=1.")
-parser.add_argument("--cuda", action="store_true", default=False,
-                    help="Use CUDA enabled device to perform testing.")
+parser.add_argument("--scale", type=int, required=True, help="Super resolution scale. Scales: 2, 3, 4.")
+parser.add_argument("--model_path", type=str, required=True, help="Path to the trained SWIFT model.")
+parser.add_argument("--batch_size", type=int, default=1, help="Batch size to use for testing. Default=1.")
+parser.add_argument("--cuda", action="store_true", default=False, help="Use CUDA enabled device to perform testing.")
 parser.add_argument('--jit', default=False, action="store_true", help='Perform inference using JIT.')
-parser.add_argument("--forward_chop", action="store_true", default=False,
-                    help="Use forward_chop for performing inference on devices with less memory.")
+parser.add_argument("--forward_chop", action="store_true", default=False, help="Use forward_chop for performing inference on devices with less memory.")
 parser.add_argument("--seed", type=int, default=3407, help="Seed for reproducibility.")
 parser.add_argument("--summary", action="store_true", default=False,help="Print summary table for model.")
 
@@ -65,20 +52,184 @@ print(f"-> Running Testing on {device_str}.")
 
 dataset_path = "./testsets/"
 
-testset_BSDS100 = prepare_testset.MakeTestSet(f"{dataset_path}BSD100/HR", None, args.scale, args.patch_size)
-testset_General100 = prepare_testset.MakeTestSet(f"{dataset_path}General100/HR", None, args.scale, args.patch_size)
-testset_Manga109 = prepare_testset.MakeTestSet(f"{dataset_path}Manga109/HR", None, args.scale, args.patch_size)
-testset_Urban100 = prepare_testset.MakeTestSet(f"{dataset_path}Urban100/HR", None, args.scale, args.patch_size)
-testset_Set14 = prepare_testset.MakeTestSet(f"{dataset_path}Set14/HR", None, args.scale, args.patch_size)
-testset_Set5 = prepare_testset.MakeTestSet(f"{dataset_path}Set5/HR/", f"{dataset_path}Set5/LR/X{args.scale}/", args.scale, args.patch_size)
+testset_Set5 = TestSet(f"{dataset_path}Set5/HR/", None, args.scale)
+testset_Set14 = TestSet(f"{dataset_path}Set14/", None, args.scale)
+testset_BSDS100 = TestSet(f"{dataset_path}BSD100/", None, args.scale)
+testset_Urban100 = TestSet(f"{dataset_path}Urban100/", None, args.scale)
+testset_Manga109 = TestSet(f"{dataset_path}Manga109/", None, args.scale)
+testset_General100 = TestSet(f"{dataset_path}General100/", None, args.scale)
 
-BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.batch_size, shuffle=False)
-General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.batch_size, shuffle=False)
-Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch_size=args.batch_size, shuffle=False)
-Urban100_data_loader = DataLoader(dataset=testset_Urban100, num_workers=0, batch_size=args.batch_size, shuffle=False)
-Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.batch_size, shuffle=False)
 Set5_data_loader = DataLoader(dataset=testset_Set5, num_workers=0, batch_size=args.batch_size, shuffle=False)
-test_data_loader_dict = {"Set5": Set5_data_loader, "Set14": Set14_data_loader, "BSD100": BSDS100_data_loader, "Urban100": Urban100_data_loader, "Manga109": Manga109_data_loader, "General100": General100_data_loader}
+Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.batch_size, shuffle=False)
+BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Urban100_data_loader = DataLoader(dataset=testset_Urban100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch_size=args.batch_size, shuffle=False)
+General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.batch_size, shuffle=False)
+
+test_data_loader_dict = {
+    "Set5": Set5_data_loader, 
+    "Set14": Set14_data_loader, 
+    "BSD100": BSDS100_data_loader, 
+    "Urban100": Urban100_data_loader, 
+    "Manga109": Manga109_data_loader, 
+    "General100": General100_data_loader
+}
+
+def test(model_path):
+
+    base_model = SWIFT(
+        img_size=64,
+        patch_size=1,
+        in_channels=3,
+        embd_dim=64,
+        rfbs=[2, 2, 2, 2],
+        depths=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        mlp_ratio=1,
+        window_size=8,
+        residual_conv="3conv",
+        scale=args.scale,
+        act_layer=nn.GELU,
+        feat_scale=False,
+        attn_scale=True,
+    )
+    
+    model_paths = [
+        (model_path, 1), #for ensemble prediction, add more here (model_path, weight)
+    ]
+
+    models = []
+    i = 1
+    for model_path, model_weights in model_paths:
+        model = copy.deepcopy(base_model)
+        print(f"-> Loading Model-{i} from", model_path)
+        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model'], strict=True)
+
+        model.to(device)
+        model.eval()
+
+        if args.summary:
+            print(f"-> Printing Model-{i} Summary.")
+            print_network(model)
+
+        if args.jit:
+            print(f"-> Using JIT for Optimizing Model-{i} Inference.")
+            x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
+            y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
+            inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+            x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+            x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+
+            model.head = torch.jit.trace(model.head, example_inputs=[(x)])
+            model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
+            model.conv_before_upsample = torch.jit.trace(model.conv_before_upsample, example_inputs=[(y)])
+            model.tail = torch.jit.trace(model.tail, example_inputs=[(y)])
+
+            for i, layers in enumerate(model.layers):
+                # select RFB from each layer and optimise non ffc parts
+                for j, rfb in enumerate(layers.rfbs):
+                    model.layers[i].rfbs[j].downsample = torch.jit.trace(rfb.downsample, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
+            print("-> JIT Optimization Completed.")
+
+        models.append((model, model_weights))
+        i+=1
+
+    print(f"-> Model(s) Built for Testing on {device_str}.")
+
+    timer = utils.Timer()
+    timer.to("cuda" if cuda and torch.cuda.is_available() else "cpu")
+
+    print("-> Testing Started.")
+    
+    testset_results = []
+
+    for testset, test_data_loader in test_data_loader_dict.items():
+
+        elapsed_time = []
+        avg_psnr_y, avg_ssim_y = 0, 0
+        print(f"\n-> Testing SWIFT(x{args.scale}) on {testset} dataset.")
+
+        for i, batch in enumerate(test_data_loader):
+            lr_tensor, hr_tensor, path = batch["lr"], batch["hr"], batch["hr_path"]
+            path = os.path.basename(path[0])
+            _,_, h_old, w_old = lr_tensor.size()
+            
+            lr_tensor = lr_tensor.to(device)
+            hr_tensor = hr_tensor.to(device)
+
+            with torch.no_grad():
+                _, _, h_old, w_old = lr_tensor.size()
+                h_pad = (h_old // model.window_size + 1) * model.window_size - h_old
+                w_pad = (w_old // model.window_size + 1) * model.window_size - w_old
+                lr_tensor = torch.cat([lr_tensor, torch.flip(lr_tensor, [2])], 2)[:, :, :h_old + h_pad, :]
+                lr_tensor = torch.cat([lr_tensor, torch.flip(lr_tensor, [3])], 3)[:, :, :, :w_old + w_pad]
+
+                if args.forward_chop:
+                    # saves memory on during testing on very large images
+                    timer.record()
+                    for model,w in models:
+                        pre = forward_chop(model, lr_tensor, args.scale) 
+                        pre = pre[..., :h_old * args.scale, :w_old * args.scale]
+                        pred.append((pre,w))
+                    timer.stop()
+                else:
+                    timer.record()
+                    pre = None
+                    pred = []
+                    for model, w in models:
+                        pre = model(lr_tensor)
+                        pre = pre[..., :h_old * args.scale, :w_old * args.scale]
+                        pred.append((pre,w))
+                    timer.stop()
+                
+                timer.sync()
+                elapsed_time.append(timer.get_elapsed_time())
+
+            for pre,w in pred:
+                sr_img = utils.tensor2np(pre.detach()[0])
+                gt_img = utils.tensor2np(hr_tensor.detach()[0])
+
+                if sr_img.ndim == 3: 
+                    sr_img = sr_img[:,:,[2,1,0]]
+                    gt_img = gt_img[:,:,[2,1,0]]
+            
+                gt_img = gt_img[:h_old*args.scale, :w_old*args.scale, ...]
+
+                psnr = calculate_psnr(sr_img, gt_img, crop_border=args.scale, test_y_channel=True) 
+                ssim = calculate_ssim(sr_img, gt_img, crop_border=args.scale, test_y_channel=True)
+                avg_psnr_y += psnr * w
+                avg_ssim_y += ssim * w
+
+            print(f"Testing {i+1} {path}\t- PSNR_Y: {psnr:.2f} dB; SSIM_Y: {ssim:.4f}; Inference Time: {elapsed_time[-1]:.2f}ms")
+        
+        elapsed_time = elapsed_time[1:] # To remove the initial warmup inference times
+        avg_psnry = avg_psnr_y / len(test_data_loader)
+        avg_ssimy = avg_ssim_y / len(test_data_loader)
+        avg_time = sum(elapsed_time) / len(elapsed_time)
+
+        heading = f"\nAverage Results for {testset}"
+        avg_results = [testset, avg_psnry, avg_ssimy, avg_time]
+        testset_results.append(avg_results)
+
+        print(heading)
+        print("-"*len(heading))
+        print("PSNR_Y: {:.4f} dB; SSIM_Y: {:.4f}; Testing Time: {:.2f}ms".format(avg_psnry, avg_ssimy, avg_time))
+
+    # fancy print
+    description = "\nSWIFT Benchmark Results"
+    dline = "=" * 82
+    line = "-" * 82
+    print(description+"\n"+dline)
+    print(f"\nScale: x{args.scale} · Number of Parameters: {sum([p.numel() for p in model.parameters()])} · Device: {device_str}.\n")
+    print(line)
+    for res in testset_results:
+        print("{: <10} - PSNR_Y: {:.4f} dB; SSIM_Y: {:.4f}; Inference Time: {:.2f}ms".format(*res))
+    print(dline)
+    print("\n-> Testing Completed.")
 
 def print_network(net):
     num_params = 0
@@ -138,182 +289,5 @@ def forward_chop(model, x, scale, shave=10, min_size=60000):
 
     return output
 
-def test(model_path, model_type="small"):
-
-    if model_type == 'small':
-        base_model = SWIFT(
-            img_size=args.patch_size//args.scale,
-            patch_size=1,
-            in_channels=3,
-            embd_dim=64,
-            rfbs=[2, 2, 2, 2],
-            depths=[2, 2, 2, 2],
-            num_heads=[8, 8, 8, 8],
-            mlp_ratio=1,
-            window_size=8,
-            residual_conv="3conv",
-            scale=args.scale,
-            act_layer=nn.GELU,
-            feat_scale=False,
-            attn_scale=True,
-        )
-    elif model_type == 'medium':
-        base_model = SWIFT(
-            img_size=args.patch_size//args.scale,
-            patch_size=1,
-            in_channels=3,
-            embd_dim=64,
-            rfbs=[2, 2, 2, 2, 2],
-            depths=[2, 2, 2, 2, 2],
-            num_heads=[8, 8, 8, 8, 8],
-            mlp_ratio=1,
-            window_size=8,
-            residual_conv="3conv",
-            scale=args.scale,
-            act_layer=nn.GELU,
-            feat_scale=False,
-            attn_scale=True,
-        )
-    
-    model_paths = [
-        (args.model_path if args.model_path else "/home/vishalr/Desktop/SWIFT/experiment/SWIFT-S-4x-662k.pth", 1), #(path, weight)
-    ]
-
-    models = []
-    i = 1
-    for model_path, model_weights in model_paths:
-        model = copy.deepcopy(base_model)
-        print(f"-> Loading Model-{i} from", model_path)
-        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
-        model.load_state_dict(checkpoint['model'], strict=True)
-
-        model.to(device)
-        model.eval()
-
-        if args.summary:
-            print(f"-> Printing Model-{i} Summary.")
-            print_network(model)
-
-        if args.jit:
-            print(f"-> Using JIT for Optimizing Model-{i} Inference.")
-            x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
-            y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
-            inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-            x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-            x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-
-            model.head = torch.jit.trace(model.head, example_inputs=[(x)])
-            model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
-            model.conv_before_upsample = torch.jit.trace(model.conv_before_upsample, example_inputs=[(y)])
-            model.tail = torch.jit.trace(model.tail, example_inputs=[(y)])
-
-            for i, layers in enumerate(model.layers):
-                # select RFB from each layer and optimise non ffc parts
-                for j, rfb in enumerate(layers.rfbs):
-                    model.layers[i].rfbs[j].downsample = torch.jit.trace(rfb.downsample, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
-            print("-> JIT Optimization Completed.")
-
-        models.append((model, model_weights))
-        i+=1
-
-    print(f"-> Model(s) Built for Testing on {device_str}.")
-
-    timer = utils.Timer()
-    timer.to("cuda" if cuda and torch.cuda.is_available() else "cpu")
-
-    print("-> Testing Started.")
-    for testset, test_data_loader in test_data_loader_dict.items():
-        test_iter = 1
-        avg_psnr_y, avg_ssim_y = 0, 0
-
-        elapsed_time = []
-        print(f"\n-> Testing SWIFT(x{args.scale}) on {testset} dataset.")
-        if not testset == "Set5" and not testset == "Personal":
-
-            if not os.path.exists(os.path.join(dataset_path, testset, "LR", f"X{args.scale}")):
-                os.makedirs(os.path.join(dataset_path, testset, "LR", f"X{args.scale}"))
-            
-            lr_save_path = os.path.join(dataset_path, testset, "LR", f"X{args.scale}")
-
-            # check if we actually need to save the files.
-            num_lr_imgs = len(sorted([x for x in os.listdir(lr_save_path) if x != ".DS_Store"]))
-            num_hr_imgs = len(sorted([x for x in os.listdir(os.path.join(dataset_path, testset, "HR")) if x != ".DS_Store"]))
-
-            print(f"=: Number of HR Images : {num_hr_imgs}")
-            print(f"=: Number of LR Images : {num_lr_imgs}")
-
-            if not num_hr_imgs == num_lr_imgs:
-                print(f"Dataset Missing! Generating LR images for X{args.scale} scale.")
-                for i, batch in enumerate(test_data_loader):
-                    lr_tensor, lr_path = batch["lr"], batch["lr_path"]
-                    hr_path = batch["hr_path"][0].split("/")[-1]
-                    if lr_path == -1:
-                        lr_img = utils.tensor2np(lr_tensor.detach()[0])
-                        lr_img = Image.fromarray(lr_img)
-                        lr_img.save(os.path.join(lr_save_path, hr_path))
-                        print(f"Saving {os.path.join(lr_save_path, hr_path)}")
-
-        for i, batch in enumerate(test_data_loader):
-            lr_tensor, hr_tensor = batch["lr"], batch["hr"]
-            _,_, h_old, w_old = lr_tensor.size()
-            
-            lr_tensor = lr_tensor.to(device)
-            hr_tensor = hr_tensor.to(device)
-
-            with torch.no_grad():
-                _, _, h_old, w_old = lr_tensor.size()
-                h_pad = (h_old // model.window_size + 1) * model.window_size - h_old
-                w_pad = (w_old // model.window_size + 1) * model.window_size - w_old
-                lr_tensor = torch.cat([lr_tensor, torch.flip(lr_tensor, [2])], 2)[:, :, :h_old + h_pad, :]
-                lr_tensor = torch.cat([lr_tensor, torch.flip(lr_tensor, [3])], 3)[:, :, :, :w_old + w_pad]
-
-                if args.forward_chop:
-                    timer.record()
-                    for model,w in models:
-                        pre = forward_chop(model, lr_tensor, args.scale) # saves memory on during testing on very large images
-                        pre = pre[..., :h_old * args.scale, :w_old * args.scale]
-                        pred.append((pre,w))
-                    timer.stop()
-                else:
-                    timer.record()
-                    pre = None
-                    pred = []
-                    for model,w in models:
-                        pre = model(lr_tensor)
-                        pre = pre[..., :h_old * args.scale, :w_old * args.scale]
-                        pred.append((pre,w))
-                    timer.stop()
-                
-                timer.sync()
-                elapsed_time.append(timer.get_elapsed_time())
-
-            for pre,w in pred:
-                sr_img = utils.tensor2np(pre.detach()[0])
-                gt_img = utils.tensor2np(hr_tensor.detach()[0])
-
-                if testset == 'Personal':
-                    print(sr_img.shape)
-                    output_img = Image.fromarray(sr_img)
-                    output_img.save(f"./results/SWIFTx{args.scale}/{i+1}.png")
-                    continue
-
-                if sr_img.ndim == 3: 
-                    sr_img = sr_img[:,:,[2,1,0]]
-                    gt_img = gt_img[:,:,[2,1,0]]
-            
-                gt_img = gt_img[:h_old*args.scale, :w_old*args.scale, ...]
-
-                avg_psnr_y += calculate_psnr(sr_img, gt_img, crop_border=args.scale, test_y_channel=True) * w
-                avg_ssim_y += calculate_ssim(sr_img, gt_img, crop_border=args.scale, test_y_channel=True) * w
-            # ------------------------------ #
-            test_iter += 1
-        
-        if testset !='Personal':
-            print("=> {} PSNR_Y: {:.4f} dB; SSIM_Y: {:.4f}; Testing Time: {:.4f}ms".format(testset ,avg_psnr_y / len(test_data_loader), avg_ssim_y / len(test_data_loader), sum(elapsed_time) / len(test_data_loader)))
-
-    print("\n-> Testing Completed.")
 if __name__ == "__main__":
-    test(args.model_path, model_type='small')
+    test(args.model_path)

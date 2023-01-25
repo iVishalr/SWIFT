@@ -27,7 +27,6 @@ def main():
     formatter_class=argparse.MetavarTypeHelpFormatter,
     )
     parser.add_argument('--scale', type=int, help='Super resolution scale. Scales: 2, 3, 4', required=True)
-    # parser.add_argument('--patch_size', type=int, help='Patch size used for training SWIFT for the scale chosen. Patch size: 128, 192, 256.', required=True)
     parser.add_argument('--model_path', type=str, help='Path to the trained SWIFT model.', required=True)
     parser.add_argument('--folder_lq', type=str, default=None, help='Path to low-quality (LR) test image folder.', required=True)
     parser.add_argument('--folder_gt', type=str, default=None, help='Path to ground-truth (HR) test image folder. (Optional)')
@@ -109,6 +108,7 @@ def main():
                 model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
                 model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
                 model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
+
         print("-> JIT Optimization Completed.")
 
     folder, save_dir, border, window_size = setup(args)
