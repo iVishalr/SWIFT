@@ -1,5 +1,6 @@
 numpy
 pandas
+matplotlib
 torch
 torchvision
 opencv-python
@@ -13,4 +14,3 @@ fvcore
 iopath
 heic2png
 tqdm
-pickle
