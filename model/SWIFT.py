@@ -6,6 +6,8 @@ from model.attention import PatchEmbed, PatchUnEmbed, SwinTransformerBlockV2
 from model.modules import RFB, PixelShuffleUpsample, default_conv
 from typing import List, Tuple, Optional
 
+__all__ = ['swift_x2', 'swift_x3', 'swift_x4']
+
 class FSTB(nn.Module):
     '''
     Fourier-Swin Transformer Block (FSTB)
@@ -319,3 +321,63 @@ class SWIFT(nn.Module):
             missing = set(own_state.keys()) - set(state_dict.keys())
             if len(missing) > 0:
                 raise KeyError('missing keys in state_dict: "{}"'.format(missing))
+
+def swift_x2(**kwargs):
+    model = SWIFT(
+        img_size=64,
+        patch_size=1,
+        in_channels=3,
+        embd_dim=64,
+        rfbs=[2, 2, 2, 2],
+        depths=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        mlp_ratio=1,
+        window_size=8,
+        residual_conv="3conv",
+        scale=2,
+        act_layer=nn.GELU,
+        feat_scale=False,
+        attn_scale=True,
+        **kwargs
+    )
+    return model
+
+def swift_x3(**kwargs):
+    model = SWIFT(
+        img_size=64,
+        patch_size=1,
+        in_channels=3,
+        embd_dim=64,
+        rfbs=[2, 2, 2, 2],
+        depths=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        mlp_ratio=1,
+        window_size=8,
+        residual_conv="3conv",
+        scale=3,
+        act_layer=nn.GELU,
+        feat_scale=False,
+        attn_scale=True,
+        **kwargs
+    )
+    return model
+
+def swift_x4(**kwargs):
+    model = SWIFT(
+        img_size=64,
+        patch_size=1,
+        in_channels=3,
+        embd_dim=64,
+        rfbs=[2, 2, 2, 2],
+        depths=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        mlp_ratio=1,
+        window_size=8,
+        residual_conv="3conv",
+        scale=4,
+        act_layer=nn.GELU,
+        feat_scale=False,
+        attn_scale=True,
+        **kwargs
+    )
+    return model

@@ -115,11 +115,11 @@ def test(model_path):
 
         if args.jit:
             print(f"-> Using JIT for Optimizing Model-{i} Inference.")
-            x = torch.randn(1,3,64,76, dtype=torch.float32, device=device)
-            y = torch.randn(1,64,64,76, dtype=torch.float32, device=device)
-            inp1 = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-            x_h = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
-            x_l = torch.randn(1,32,256,181, dtype=torch.float32, device=device)
+            x = torch.randn(4,3,64,76, dtype=torch.float32, device=device)
+            y = torch.randn(4,64,64,76, dtype=torch.float32, device=device)
+            inp1 = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
+            x_h = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
+            x_l = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
 
             model.head = torch.jit.trace(model.head, example_inputs=[(x)])
             model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
