@@ -11,13 +11,16 @@ _Note that all the below steps needs to be executed from the project's root dire
 Using python-pip,
 
 ```bash
-pip install torchserve torch-model-archiver torch-workflow-archiver
+pip install torchserve torch-model-archiver torch-workflow-archiver nvgpu
 ```
 
 Using conda,
 
 ```bash
 conda install -c pytorch torchserve torch-model-archiver torch-workflow-archiver
+
+# (optional) If you have GPU, install nvgpu using pip
+pip install nvgpu
 ```
 
 2. Creating `swift.mar` file

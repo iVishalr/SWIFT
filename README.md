@@ -13,26 +13,7 @@ This repository contains the official implementation for the paper titled _"Towa
 </p>
 
 <p align="justify">
-<i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being 37% faster during inference.</i>
-</p>
-
-## Results
-
-### Quantitative Comparisons
-
-The table below shows the quantitative comparisons of SWIFT with other state-of-the-art methods on Lightweight Image Super Resolution on popular benchmarking datasets. We compare models based on the scores achieved in PSNR and SSIM metrics. The first and second best methods have been highlighted with <span style="color:red">red</span> and <span style="color:blue">blue</span> respectively.
-
-<p float="left" align="center" padding="100px">
-  <img src="./doc/images/SWIFT-Results.png" width=100%/>
-</p>
-
-### Comparison on Inference Time
-
-The table below shows the comparison of inference time of state-of-the-art methods on benchmarking datasets for ×4 scale. The <span style="color:green">▼</span> symbol indicates improvement and <span style="color:red">▲</span> symbol indicates deterioration of inference time compared to the reference model. The reference model used for
-comparisons for different model architecture types is indicated by \* (asterisks).
-
-<p float="left" align="center" padding="100px">
-  <img src="./doc/images/SWIFT-Inference.png" width=100%/>
+<i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being upto 52% faster during inference.</i>
 </p>
 
 ## Training
@@ -117,10 +98,6 @@ SWIFT uses tensorboard for storing all training metrics and predictions on image
 tensorboard --logdir=runs --bind_all
 ```
 
-<!-- ```bash
-conda activate pytorch && python3 train.py --scale=3 --patch_size=192 --batch_size=64 --lr=2e-4 --n_epochs=60000 --root="/home/vishalramesh01/Datasets/" --cuda --model="-SwinV2-HiFB6-DIV2K-BS64-LWx3-700k" --seed=3407 --ckpt_dir="/home/vishalramesh01/ESRT/experiment/" --n_train=800 --log_every=100 --test_every=1000 --save_every=2000 --amp --load_mem
-```-->
-
 We use a single NVIDIA TESLA A100 GPU for training the models.
 
 ## Testing
@@ -142,14 +119,13 @@ Other options provided by the `test.py` are shown below
 
 ```console
 $ python3 test.py --help
-usage: test.py [-h] --scale int --patch_size int --model_path str [--batch_size int] [--cuda] [--jit] [--forward_chop] [--seed int] [--summary]
+usage: test.py [-h] --scale int --model_path str [--batch_size int] [--cuda] [--jit] [--forward_chop] [--seed int] [--summary]
 
 Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
 
 options:
   -h, --help        show this help message and exit
   --scale int       Super resolution scale. Scales: 2, 3, 4.
-  --patch_size int  Patch size used for training SWIFT for the scale chosen. Patch Sizes: 128, 192, 256.
   --model_path str  Path to the trained SWIFT model.
   --batch_size int  Batch size to use for testing. Default=1.
   --cuda            Use CUDA enabled device to perform testing.
@@ -209,6 +185,65 @@ options:
   --forward_chop      Use forward_chop for performing inference on devices with less memory.
   --summary           Print summary table for model.
 ```
+
+## Docker
+
+If you want to test out SWIFT, we provide a docker image that comes with all the dependencies pre-installed. The image can be run on both CPU and CUDA enbaled GPU. To run on GPU, please refer to the [installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
+
+### To build image from scratch
+
+Use the following command to build docker image from scratch
+
+```bash
+docker build -t swift:0.1 -f docker/swift.dockerfile .
+```
+
+### To run SWIFT in docker container
+
+To run the docker container on CPU, type the following command in terminal
+
+```bash
+docker run --rm -it swift:0.1 bash
+```
+
+To run the docker container on GPU, type the following command in terminal
+
+```bash
+docker run --rm --gpus all -it swift:0.1 bash
+```
+
+## SWIFT Inference using TorchServe
+
+We provide a easy to use SWIFT inference using TorchServe. Refer to `serve/README.md` to install and use TorchServe.
+
+Currently under development.
+
+## Results
+
+### Qualitative Comparisons
+
+The figure below shows the qualitative comparisons of SWIFT and other state-of-the-art methods on a small patch highlighted by the red rectangle.
+
+<p float="left" align="center" padding="100px">
+  <img src="./doc/images/SWIFT-Qualitative.png" width=100%/>
+</p>
+
+### Quantitative Comparisons
+
+The table below shows the quantitative comparisons of SWIFT with other state-of-the-art methods on Lightweight Image Super Resolution on popular benchmarking datasets. We compare models based on the scores achieved in PSNR and SSIM metrics. The first and second best methods have been highlighted with <span style="color:red">red</span> and <span style="color:blue">blue</span> respectively.
+
+<p float="left" align="center" padding="100px">
+  <img src="./doc/images/SWIFT-Results.png" width=100%/>
+</p>
+
+### Comparison on Inference Time
+
+The table below shows the comparison of inference time of state-of-the-art methods on benchmarking datasets for ×4 scale. The <span style="color:green">▼</span> symbol indicates improvement and <span style="color:red">▲</span> symbol indicates deterioration of inference time compared to the reference model. The reference model used for
+comparisons for different model architecture types is indicated by \* (asterisks).
+
+<p float="left" align="center" padding="100px">
+  <img src="./doc/images/SWIFT-Inference.png" width=100%/>
+</p>
 
 ## Citation
 
