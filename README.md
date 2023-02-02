@@ -16,6 +16,15 @@ This repository contains the official implementation for the paper titled _"Towa
 <i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being upto 52% faster during inference.</i>
 </p>
 
+## Contents
+
+1. [Training](#training)
+2. [Testing](#testing)
+3. [Predictions](#predictions)
+4. [Docker](#docker)
+5. [Swift Inference using TorchServe](#swift-inference-using-torchserve)
+6. [Results](#results)
+
 ## Training
 
 We use the [DIV2K](https://cv.snu.ac.kr/research/EDSR/DIV2K.tar) dataset (800 images) for training the model. We also experiment with training models on DF2K (DIV2K + [Flickr2K](https://cv.snu.ac.kr/research/EDSR/Flickr2K.tar)). The model scores reported in the paper and the released checkpoints for the model use only DIV2K for training.
