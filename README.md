@@ -1,10 +1,10 @@
-# Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
+# SWIFT
 
 [Vishal Ramesha](https://github.com/iVishalr), [Abhishek Aditya BS](https://github.com/Abhishek-Aditya-bs), [Yashas Kadambi](https://github.com/Yashas120), [T Vijay Prashant](https://github.com/tvijayprashant), [Shylaja S S](https://scholar.google.co.in/citations?user=X365OjgAAAAJ&hl=en)
 
 [[Paper]](#)
 
-This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_ presented at NTIRE Workshop, CVPR 2023.
+This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_.
 
 ## SWIFT for Lightweight Image Super Resolution
 
@@ -223,9 +223,69 @@ docker run --rm --gpus all -it swift:0.1 bash
 
 ## SWIFT Inference using TorchServe
 
-We provide a easy to use SWIFT inference using TorchServe. Refer to `serve/README.md` to install and use TorchServe.
+We provide a easy to use SWIFT inference using TorchServe. This section provides instructions to run SWIFT using TorchServe in Docker. To setup TorchServe locally, please refer to [README.md](serve/README.md).
 
-Currently under development.
+### Requirements
+
+Make sure you have the following packages installed.
+
+1. Numpy
+2. Pillow
+3. Requests
+
+### Build SWIFT Inference image
+
+To build for CPU, type the following command in terminal
+
+```bash
+docker build -t swift_inference:0.1 -f docker/swift_inference.dockerfile .
+```
+
+To build for GPU, type the following command in terminal
+
+```bash
+docker build -t swift_inference:0.1 --build-arg image=pytorch/torchserve:latest-gpu -f docker/swift_inference.dockerfile .
+```
+
+### Run SWIFT Inference
+
+To run on CPU,
+
+```bash
+docker run -p 8080:8080 -p 8081:8081 -d swift_inference:0.1
+```
+
+To run on GPU,
+
+```bash
+docker run --gpus all -p 8080:8080 -p 8081:8081 -d swift_inference:0.1
+```
+
+Running on GPU requires docker to be setup on NVIDIA GPUs. Please refer to [Docker](#docker) section.
+
+### Make Predictions
+
+To make predictions using SWIFT running on TorchServe, use `serve/infer.py` to make predictions on images.
+
+```bash
+python3 serve/infer.py --path=<path_to_image> --scale=<2,3,4>
+```
+
+```console
+$ python3 serve/infer.py -h
+usage: infer.py [-h] --path str --scale int [--save] [--save_dir str]
+
+Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions
+
+options:
+  -h, --help      show this help message and exit
+  --path str      Path to image for prediction.
+  --scale int     Super resolution scale. Scales: 2, 3, 4.
+  --save          Store predictions.
+  --save_dir str  Path to folder for saving predicitons.
+```
+
+Pass args `--save` and `--save_dir` for saving the predictions made using SWIFT.
 
 ## Results
 
