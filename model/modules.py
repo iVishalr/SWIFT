@@ -20,10 +20,6 @@ class Scale(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * self.scale
 
-class Swish(nn.Module):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x * torch.sigmoid(x)
-
 def default(val, d):
     if val is not None:
         return val
@@ -71,16 +67,18 @@ class one_conv(nn.Module):
         self.conv = nn.Conv2d(in_channels, growth_rate, kernel_size=kernel_size, padding = kernel_size>>1, stride= 1)
         self.flag = relu
         self.conv1 = nn.Conv2d(growth_rate, in_channels, kernel_size=kernel_size, padding = kernel_size>>1, stride= 1)
+        
         if relu:
             self.relu = nn.PReLU(growth_rate)
+        
         self.w = Scale(1.)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.flag == False:
-            output = x + self.w(self.conv1(self.conv(x)))
+            output = self.w(self.conv1(self.conv(x)))
         else:
-            output = x + self.w(self.conv1(self.relu(self.conv(x))))
-        return output
+            output = self.w(self.conv1(self.relu(self.conv(x))))
+        return output + x
 
 class RFB(nn.Module):
     def __init__(self, in_channels, out_channels) -> None:
@@ -148,7 +146,7 @@ class SCAM(nn.Module):
         q = self.q(self.ln1(x_l)) # (B,H,W,C)
         k = self.k(self.ln2(x_h)) # (B,H,W,C)
 
-        attn = (q @ k.transpose(2, 3)) / math.sqrt(C)
+        attn = (q @ k.transpose(2, 3)) * (1.0 / math.sqrt(C))
 
         attn_l = F.softmax(attn.transpose(2,3),dim = -1) # (B, H, W, W)
         attn_h = F.softmax(attn, dim=-1)  # (B, H, W, W)

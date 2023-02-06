@@ -93,9 +93,6 @@ print("Device: {}".format(torch.cuda.get_device_name(0)))
 print("-" * 50)
 print()
 
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
-torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 
 writer = SummaryWriter(comment=f'{args.model}_x{args.scale}')
 
@@ -107,6 +104,11 @@ random.seed(seed)
 torch.manual_seed(seed)
 
 cuda = args.cuda
+if cuda and torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+    torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
+    
 device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
 
 print("===> Loading Datasets")

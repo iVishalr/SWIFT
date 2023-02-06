@@ -223,7 +223,7 @@ docker run --rm --gpus all -it swift:0.1 bash
 
 ## SWIFT Inference using TorchServe
 
-We provide a easy to use SWIFT inference using TorchServe. This section provides instructions to run SWIFT using TorchServe in Docker. To setup TorchServe locally, please refer to [README.md](serve/README.md).
+We provide an easy to use SWIFT inference using TorchServe. This section provides instructions to run SWIFT using TorchServe in Docker. To setup TorchServe locally, please refer to [README.md](serve/README.md).
 
 ### Requirements
 

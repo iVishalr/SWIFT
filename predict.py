@@ -16,10 +16,6 @@ from fvcore.nn import FlopCountAnalysis, flop_count_table
 import warnings
 warnings.filterwarnings("ignore")
 
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
-torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-
 def main():
     parser = argparse.ArgumentParser(
     prog="predict.py",
@@ -42,6 +38,11 @@ def main():
     cuda = args.cuda
     device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
     
+    if cuda and torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+        torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
+        
     device_str = None
     if cuda and torch.cuda.is_available():
         device_str = torch.cuda.get_device_name(0) + " GPU"

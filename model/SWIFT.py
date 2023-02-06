@@ -99,22 +99,22 @@ class FSTB(nn.Module):
 
     def forward(self, x: torch.Tensor, x_size: Tuple[int, int]) -> torch.Tensor:
         out = x
-
         if self.depth != 0:
             # extract patches
             out = self.patch_embed(out)
             # pass through S2TL
+            out = out.contiguous()
             for block in self.blocks:
                 out = block(out, x_size)
 
             # reform the image
             out = self.patch_unembd(out, x_size)
-
+            out = out.contiguous()
+            
         for rfb in self.rfbs:
             out = rfb(out)
 
-        out = self.conv(out)
-        out = out + x
+        out = self.conv(out) + x
         return out
         
 class SWIFT(nn.Module):
@@ -192,7 +192,8 @@ class SWIFT(nn.Module):
                 num_heads=num_heads[i_layer],
                 window_size=window_size,
                 mlp_ratio=mlp_ratio,
-                qkv_bias=qkv_bias, qk_scale=qk_scale,
+                qkv_bias=qkv_bias, 
+                qk_scale=qk_scale,
                 drop=drop,
                 attn_drop=attn_drop,
                 drop_path=dpr[sum(depths[:i_layer]):sum(depths[:i_layer+1])],
@@ -271,11 +272,10 @@ class SWIFT(nn.Module):
         shallow_features = self.head(x)
 
         # ----------------- Deep Features ------------------ #
-        x = shallow_features
-        out = self.forward_features(x)
+        out = self.forward_features(shallow_features)
         out = self.conv_after_body(out)
         out = out + shallow_features
-
+         
         # ------------------- Upsampler --------------------- #
         out = self.conv_before_upsample(out)
 

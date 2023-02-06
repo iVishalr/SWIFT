@@ -15,7 +15,6 @@ from PIL import Image
 from util.calculate_psnr_ssim import calculate_psnr, calculate_ssim
 from fvcore.nn import FlopCountAnalysis, flop_count_table
 
-
 parser = argparse.ArgumentParser(
     prog="test.py",
     description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
@@ -45,6 +44,8 @@ device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
 device_str = None
 if cuda and torch.cuda.is_available():
     device_str = torch.cuda.get_device_name(0) + " GPU"
+    torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+    torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 else:
     device_str = "CPU"
 
@@ -52,6 +53,7 @@ print(f"-> Running Testing on {device_str}.")
 
 dataset_path = "./testsets/"
 
+testset_div2k = TestSet(f"/home/vishalr/Desktop/SRDatasets/DIV2K/DIV2K_valid_HR/", None, args.scale)
 testset_Set5 = TestSet(f"{dataset_path}Set5/HR/", None, args.scale)
 testset_Set14 = TestSet(f"{dataset_path}Set14/", None, args.scale)
 testset_BSDS100 = TestSet(f"{dataset_path}BSD100/", None, args.scale)
@@ -59,6 +61,7 @@ testset_Urban100 = TestSet(f"{dataset_path}Urban100/", None, args.scale)
 testset_Manga109 = TestSet(f"{dataset_path}Manga109/", None, args.scale)
 testset_General100 = TestSet(f"{dataset_path}General100/", None, args.scale)
 
+div2k_data_loader = DataLoader(dataset=testset_div2k, num_workers=0, batch_size=args.batch_size, shuffle=False)
 Set5_data_loader = DataLoader(dataset=testset_Set5, num_workers=0, batch_size=args.batch_size, shuffle=False)
 Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.batch_size, shuffle=False)
 BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.batch_size, shuffle=False)
@@ -67,6 +70,7 @@ Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch
 General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.batch_size, shuffle=False)
 
 test_data_loader_dict = {
+    "DIV2K": div2k_data_loader, 
     "Set5": Set5_data_loader, 
     "Set14": Set14_data_loader, 
     "BSD100": BSDS100_data_loader, 
@@ -115,24 +119,25 @@ def test(model_path):
 
         if args.jit:
             print(f"-> Using JIT for Optimizing Model-{i} Inference.")
+
             x = torch.randn(4,3,64,76, dtype=torch.float32, device=device)
             y = torch.randn(4,64,64,76, dtype=torch.float32, device=device)
             inp1 = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
             x_h = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
             x_l = torch.randn(4,32,256,181, dtype=torch.float32, device=device)
 
-            model.head = torch.jit.trace(model.head, example_inputs=[(x)])
-            model.conv_after_body = torch.jit.trace(model.conv_after_body, example_inputs=[(y)])
-            model.conv_before_upsample = torch.jit.trace(model.conv_before_upsample, example_inputs=[(y)])
-            model.tail = torch.jit.trace(model.tail, example_inputs=[(y)])
+            model.head = torch.jit.script(model.head, example_inputs=[(x)])
+            model.conv_after_body = torch.jit.script(model.conv_after_body, example_inputs=[(y)])
+            model.conv_before_upsample = torch.jit.script(model.conv_before_upsample, example_inputs=[(y)])
+            model.tail = torch.jit.script(model.tail, example_inputs=[(y)])
 
             for i, layers in enumerate(model.layers):
                 # select RFB from each layer and optimise non ffc parts
                 for j, rfb in enumerate(layers.rfbs):
-                    model.layers[i].rfbs[j].downsample = torch.jit.trace(rfb.downsample, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].extractor_body = torch.jit.trace(rfb.extractor_body, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].conv1x1 = torch.jit.trace(rfb.conv1x1, example_inputs=[(inp1)])
-                    model.layers[i].rfbs[j].scam = torch.jit.trace(rfb.scam, example_inputs=[x_h, x_l])
+                    model.layers[i].rfbs[j].downsample = torch.jit.script(rfb.downsample, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].extractor_body = torch.jit.script(rfb.extractor_body, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].conv1x1 = torch.jit.script(rfb.conv1x1, example_inputs=[(inp1)])
+                    model.layers[i].rfbs[j].scam = torch.jit.script(rfb.scam, example_inputs=[x_h, x_l])
             print("-> JIT Optimization Completed.")
 
         models.append((model, model_weights))
