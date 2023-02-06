@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")
 def main():
     parser = argparse.ArgumentParser(
     prog="predict.py",
-    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using SwinV2 Transformers and Fourier Convolutions",
     formatter_class=argparse.MetavarTypeHelpFormatter,
     )
     parser.add_argument('--scale', type=int, help='Super resolution scale. Scales: 2, 3, 4', required=True)
@@ -42,7 +42,7 @@ def main():
         torch.backends.cudnn.benchmark = True
         torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
         torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-        
+
     device_str = None
     if cuda and torch.cuda.is_available():
         device_str = torch.cuda.get_device_name(0) + " GPU"

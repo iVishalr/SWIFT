@@ -17,7 +17,7 @@ from fvcore.nn import FlopCountAnalysis, flop_count_table
 
 parser = argparse.ArgumentParser(
     prog="test.py",
-    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using SwinV2 Transformers and Fourier Convolutions",
     formatter_class=argparse.MetavarTypeHelpFormatter,
 )
 parser.add_argument("--scale", type=int, required=True, help="Super resolution scale. Scales: 2, 3, 4.")
@@ -53,7 +53,6 @@ print(f"-> Running Testing on {device_str}.")
 
 dataset_path = "./testsets/"
 
-testset_div2k = TestSet(f"/home/vishalr/Desktop/SRDatasets/DIV2K/DIV2K_valid_HR/", None, args.scale)
 testset_Set5 = TestSet(f"{dataset_path}Set5/HR/", None, args.scale)
 testset_Set14 = TestSet(f"{dataset_path}Set14/", None, args.scale)
 testset_BSDS100 = TestSet(f"{dataset_path}BSD100/", None, args.scale)
@@ -61,7 +60,6 @@ testset_Urban100 = TestSet(f"{dataset_path}Urban100/", None, args.scale)
 testset_Manga109 = TestSet(f"{dataset_path}Manga109/", None, args.scale)
 testset_General100 = TestSet(f"{dataset_path}General100/", None, args.scale)
 
-div2k_data_loader = DataLoader(dataset=testset_div2k, num_workers=0, batch_size=args.batch_size, shuffle=False)
 Set5_data_loader = DataLoader(dataset=testset_Set5, num_workers=0, batch_size=args.batch_size, shuffle=False)
 Set14_data_loader = DataLoader(dataset=testset_Set14, num_workers=0, batch_size=args.batch_size, shuffle=False)
 BSDS100_data_loader = DataLoader(dataset=testset_BSDS100, num_workers=0, batch_size=args.batch_size, shuffle=False)
@@ -70,7 +68,6 @@ Manga109_data_loader = DataLoader(dataset=testset_Manga109, num_workers=0, batch
 General100_data_loader = DataLoader(dataset=testset_General100, num_workers=0, batch_size=args.batch_size, shuffle=False)
 
 test_data_loader_dict = {
-    "DIV2K": div2k_data_loader, 
     "Set5": Set5_data_loader, 
     "Set14": Set14_data_loader, 
     "BSD100": BSDS100_data_loader, 

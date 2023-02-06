@@ -51,10 +51,10 @@ torchserve --start --model-store serve/model_store/ --models swift=swift.mar --t
 torchserve --stop
 ```
 
-4. Making predictions (In development)
+1. Making predictions
 
 ```bash
-python3 serve/test_serve.py
+python3 serve/infer.py --scale=<2,3,4> --path=<path_to_image>
 ```
 
-`serve/test_serve.py` reads an image from a file, packages it to adhere to TorchServe API and makes a request to TorchServe for predictions.
+`serve/infer.py` reads an image from a file, packages it to adhere to TorchServe API and makes a request to TorchServe for predictions.

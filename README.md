@@ -4,7 +4,7 @@
 
 [[Paper]](#)
 
-This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions"_.
+This repository contains the official implementation for the paper titled _"Towards Faster and Efficient Lightweight Image Super Resolution using SwinV2 Transformers and Fourier Convolutions"_.
 
 ## SWIFT for Lightweight Image Super Resolution
 
