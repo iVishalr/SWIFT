@@ -24,7 +24,7 @@ from data.dataset import CPUPrefetcher, CUDAPrefetcher
 
 parser = argparse.ArgumentParser(
     prog="train.py",
-    description="Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions",
+    description="Towards Faster and Efficient Lightweight Image Super Resolution using SwinV2 Transformers and Fourier Convolutions",
     formatter_class=argparse.MetavarTypeHelpFormatter,
 )
 
@@ -108,7 +108,7 @@ if cuda and torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
     torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-    
+
 device = torch.device('cuda' if cuda and torch.cuda.is_available() else 'cpu')
 
 print("===> Loading Datasets")

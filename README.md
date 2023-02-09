@@ -13,7 +13,7 @@ This repository contains the official implementation for the paper titled _"Towa
 </p>
 
 <p align="justify">
-<i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being upto 52% faster during inference.</i>
+<i>Lightweight Single Image Super Resolution in recent times has seen lot of advances. Transformer based methods have achieved great improvements over CNN-based methods. This is mainly driven by transformer's ability to effectively model long-range dependencies in images. However, transformer based approaches have lot of parameters and are computationally expensive during inference. In this work, we propose SWIFT, a hybrid of Swin transformers and Fast Fourier Convolutions (FFC). SWIFT consists of three stages: shallow feature extraction, deep feature extraction and high-quality image reconstruction. Deep feature extraction consists of SwinV2 transformer blocks extended with Attention Scaling and our novel Residual Frequency Blocks (RFB) to effectively extract high frequency details and model long-range dependencies. Experimental results on popular benchmarking datasets shows that SWIFT outperforms state-of-the-art methods like SwinIR in the realm of lightweight SISR while using 33.55% less parameters and being upto 60% faster during inference.</i>
 </p>
 
 ## Contents
@@ -199,6 +199,24 @@ options:
 
 If you want to test out SWIFT, we provide a docker image that comes with all the dependencies pre-installed. The image can be run on both CPU and CUDA enbaled GPU. To run on GPU, please refer to the [installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
 
+### Run SWIFT using prebuilt images
+
+To run SWIFT training image, type the following command in terminal
+
+To run on CPU,
+
+```bash
+docker run --rm -p 6006:6006 -it ivishalr/swift-training:latest bash
+```
+
+To run on GPU,
+
+```bash
+docker run --rm --gpus all -p 6006:6006 -it ivishalr/swift-training:latest-gpu bash
+```
+
+Note: The above image will be pulled from DockerHub and requires internet connection.
+
 ### To build image from scratch
 
 Use the following command to build docker image from scratch
@@ -233,7 +251,25 @@ Make sure you have the following packages installed.
 2. Pillow
 3. Requests
 
-### Build SWIFT Inference image
+### Run SWIFT Inference using Prebuilt Docker Image
+
+To run SWIFT inference image, type the following command in terminal
+
+To run on CPU,
+
+```bash
+docker run -p 8080:8080 -p 8081:8081 -d ivishalr/swift:latest
+```
+
+To run on GPU,
+
+```bash
+docker run --gpus all -p 8080:8080 -p 8081:8081 -d ivishalr/swift:latest-gpu
+```
+
+Note: The above image will be pulled from DockerHub and requires internet connection.
+
+### Build SWIFT Inference image locally
 
 To build for CPU, type the following command in terminal
 
