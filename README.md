@@ -212,7 +212,7 @@ docker run --rm -p 6006:6006 -it ivishalr/swift-training:latest bash
 To run on GPU,
 
 ```bash
-docker run --rm --gpus all -p 6006:6006 -it ivishalr/swift-training:latest-gpu bash
+docker run --rm --gpus all -p 6006:6006 -it ivishalr/swift-training:latest bash
 ```
 
 Note: The above image will be pulled from DockerHub and requires internet connection.

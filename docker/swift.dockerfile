@@ -5,3 +5,4 @@ RUN apt update && apt install -y ssh rsync vim openjdk-17-jdk openssh-client wge
 COPY . /SWIFT
 WORKDIR /SWIFT
 RUN pip3 install -r requirements.txt
+EXPOSE 6006
