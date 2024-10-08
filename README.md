@@ -354,11 +354,11 @@ comparisons for different model architecture types is indicated by \* (asterisks
 
 If you find our work useful in your works, please use the below citation. Thank You!
 
-    @InProceedings{ramesha2023towards,
-        author    = {Vishal Ramesha and Abhishek Aditya BS and Yashas Kadambi and T Vijay Prashant and Shylaja S S},
-        title     = {Towards Faster and Efficient Lightweight Image Super Resolution using Swin Transformers and Fourier Convolutions},
-        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-        date      = {2023}
+    @inproceedings{ramesha2022towards,
+      title={Towards Faster and Efficient Lightweight Image Super Resolution Using Transformers and Fourier Convolutions},
+      author={Ramesha, Vishal and Kadambi, Yashas and Aditya, Abhishek and Prashant, T Vijay and Shylaja, SS},
+      booktitle={Artificial Intelligence and Applications},
+      year={2022}
     }
 
 ## License
